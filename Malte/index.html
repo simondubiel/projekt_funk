@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flask React Website</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+  <style>
+    /* CSS für die Seite */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: url('./Pictures/Background.jpg') no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.8); /* Transparenter Hintergrund */
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr); /* 4 gleich große Spalten */
+      grid-gap: 15px;
+      padding: 20px;
+    }
+
+    .top-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 50px;
+      font-size: 14px;
+    }
+
+    .large-container {
+      grid-column: span 2;
+      height: 400px;
+      margin-top: 0px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+    }
+
+    /* Karte soll die komplette Größe des Containers nutzen */
+    #map {
+      width: calc(100% - 10px); /* Breite mit Rand */
+      height: calc(100% - 10px); /* Höhe mit Rand */
+      margin: 5px; /* 5px Abstand von allen Seiten */
+      border-radius: 10px; /* Leichte Abrundung für schöneres Design */
+    }
+
+    .right-containers {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      grid-column: span 2;
+      height: 100%;
+    }
+
+    .small-container {
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .full-width-container {
+      grid-column: span 4;
+      height: 150px;
+    }
+
+    .button {
+      background-color: rgb(54, 150, 213);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 15px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .button:hover {
+      background-color: rgb(30, 130, 200);
+    }
+
+    .input-field {
+      width: 70%;
+      padding: 5px;
+      margin: 5px auto;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .table-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .selected {
+      background-color: rgba(54, 150, 213, 0.5) !important;
+      color: white;
+      font-weight: bold;
+    }
+
+    .top-container h3 {
+      margin-bottom: 2px; /* Abstand zwischen Überschrift und Zahl verkleinern */
+    }
+
+    .top-container p {
+      margin-top: 2px; /* Entfernt zusätzlichen oberen Abstand vom Text */
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #3696d5;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-layout">
+    <!-- Obere 4 Container -->
+    <div class="container top-container"><h3>Stationen</h3><p>10000</p></div>
+    <div class="container top-container"><h3>Länder</h3><p>140</p></div>
+    <div class="container top-container"><h3>Max Delta</h3><p>30</p></div>
+    <div class="container top-container"><h3>Auswählbar</h3><p>20</p></div>
+
+    <!-- Mittelbereich -->
+    <div class="container large-container">
+      <div id="map"></div> <!-- Leaflet Map Container -->
+    </div>
+
+    <div class="right-containers">
+      <div class="container small-container">
+        <h3>Koordinaten</h3>
+        <input type="text" class="input-field" placeholder="Latitude">
+        <input type="text" class="input-field" placeholder="Longitude">
+        <button class="button">Bestätigen</button>
+      </div>
+      <div class="container small-container">
+        <h3>Verfügbare Stationen</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+              </tr>
+            </thead>
+            <tbody id="station-table">
+              <tr onclick="selectStation(this)"><td>Station A</td><td>52.52</td><td>13.40</td></tr>
+              <tr onclick="selectStation(this)"><td>Station B</td><td>48.85</td><td>2.35</td></tr>
+              <tr onclick="selectStation(this)"><td>Station C</td><td>51.51</td><td>-0.12</td></tr>
+              <tr onclick="selectStation(this)"><td>Station D</td><td>40.71</td><td>-74.01</td></tr>
+              <tr onclick="selectStation(this)"><td>Station E</td><td>35.68</td><td>139.76</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Untere Container -->
+    <div class="container full-width-container">Unterer Container 1</div>
+    <div class="container full-width-container">Unterer Container 2</div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+  <script>
+    // Initialisiere die Karte in der div #map
+    var map = L.map('map').setView([52.52, 13.40], 5); // Startposition: Berlin, Zoom 5
+
+    // OpenStreetMap Layer hinzufügen
+    var OpenStreetMap_Mapnik = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    function selectStation(row) {
+      let rows = document.querySelectorAll("#station-table tr");
+      rows.forEach(r => r.classList.remove("selected"));
+
+      row.classList.add("selected");
+
+      let stationName = row.cells[0].innerText;
+      let latitude = parseFloat(row.cells[1].innerText);
+      let longitude = parseFloat(row.cells[2].innerText);
+
+      console.log(`Ausgewählte Station: ${stationName}, Lat: ${latitude}, Lon: ${longitude}`);
+
+      // Karte auf neue Koordinaten setzen
+      map.setView([latitude, longitude], 10);
+    }
+  </script>
+
+</body>
+</html>
