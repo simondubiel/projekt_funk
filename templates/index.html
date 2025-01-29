@@ -1,1 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Web App</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    
+    <!-- Eigene CSS-Datei -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="grid-layout">
+        <!-- Obere 4 Container -->
+        <div class="container top-container"><h3>Stationen</h3><p>10000</p></div>
+        <div class="container top-container"><h3>Länder</h3><p>140</p></div>
+        <div class="container top-container">
+            <h3>Radius</h3>
+            <div class="radius-wrapper">
+                <input type="text" id="radius-input" class="radius-input" value="50" placeholder="Radius auswählen">
+                <button class="radius-dropdown-btn" onclick="toggleRadiusDropdown()">▼</button>
+                <ul id="radius-dropdown" class="radius-dropdown">
+                    <li onclick="setRadiusValue(10)">10 km</li>
+                    <li onclick="setRadiusValue(20)">20 km</li>
+                    <li onclick="setRadiusValue(50)">50 km</li>
+                    <li onclick="setRadiusValue(100)">100 km</li>
+                    <li onclick="setRadiusValue(200)">200 km</li>
+                    <li onclick="setRadiusValue(500)">500 km</li>
+                    <li onclick="setRadiusValue(1000)">1000 km</li>
+                </ul>
+            </div>
+        </div>
+        <div class="container top-container">
+            <h3>Zeitraum</h3>
+            <div class="date-container">
+                <input type="date" id="start-date" class="date-input" value="2024-01-01">
+                <input type="date" id="end-date" class="date-input" value="2024-12-31">
+            </div>
+        </div>
 
+        <!-- Mittelbereich -->
+        <div class="container large-container">
+            <div id="map"></div> <!-- Leaflet Map Container -->
+        </div>
+
+        <div class="right-containers">
+            <div class="container small-container">
+                <h3>Koordinaten</h3>
+                <input type="text" class="input-field" placeholder="Latitude">
+                <input type="text" class="input-field" placeholder="Longitude">
+                <button class="button" onclick="saveSearchCriteria()">Bestätigen</button>
+            </div>
+            <div class="container small-container">
+                <h3>Verfügbare Stationen</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                            </tr>
+                        </thead>
+                        <tbody id="station-table">
+                            <tr onclick="selectStation(this)"><td>Station A</td><td>52.52</td><td>13.40</td></tr>
+                            <tr onclick="selectStation(this)"><td>Station B</td><td>48.85</td><td>2.35</td></tr>
+                            <tr onclick="selectStation(this)"><td>Station C</td><td>51.51</td><td>-0.12</td></tr>
+                            <tr onclick="selectStation(this)"><td>Station D</td><td>40.71</td><td>-74.01</td></tr>
+                            <tr onclick="selectStation(this)"><td>Station E</td><td>35.68</td><td>139.76</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Untere Container -->
+        <div id="weather-data-container" class="container full-width-container">
+            <h3>Weather Data</h3>
+            <p>Select a station to view data.</p>
+        </div>
+        <div class="container full-width-container">Unterer Container 1</div>
+        <div class="container full-width-container">Unterer Container 2</div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <!-- Eigene JavaScript-Datei -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

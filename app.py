@@ -1,13 +1,20 @@
+from flask import Flask, render_template, jsonify, request
+from flask_cors import CORS
 import requests
 import pandas as pd
 from io import StringIO
 from math import radians, cos, sin, sqrt, atan2
-from flask import Flask, request, jsonify
 
 # Basis-URL für die GHCN-Daily-Daten
 GHCN_BASE_URL = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", template_folder="templates")
+CORS(app)
+
+# Route to serve index.html
+@app.route('/')
+def index():
+    return render_template("index.html")
 
 def haversine(lat1, lon1, lat2, lon2):
     """Berechnet die Entfernung zwischen zwei Punkten auf der Erde in km."""
@@ -65,9 +72,11 @@ def parse_ghcn_dly_from_string(data):
 @app.route('/get_weather_data', methods=['GET'])
 def get_weather_data():
     station_id = request.args.get('station_id')
+    if not station_id:
+        return jsonify({"error": "No station ID provided"}), 400
     weather_data = fetch_weather_data(station_id)
-    if weather_data is None:
-        return jsonify({"error": "No data found"}), 404
+    if weather_data is None or weather_data.empty:
+        return jsonify({"error": f"No data found for station {station_id}"}), 404
     return weather_data.to_json(orient='records')
 
 @app.errorhandler(Exception)
