@@ -227,7 +227,20 @@
   <div class="grid-layout">
     <!-- Obere 4 Container -->
     <div class="container top-container"><h3>Stationen</h3><p>10000</p></div>
-    <div class="container top-container"><h3>Länder</h3><p>140</p></div>
+    <div class="container top-container">
+  <h3>Angezeigte Stationen</h3>
+  <div class="radius-wrapper">
+    <input type="text" id="station-count-input" class="radius-input" value="10" placeholder="Anzahl auswählen" oninput="validateStationCount(this)">
+    <button class="radius-dropdown-btn" onclick="toggleStationDropdown()">▼</button>
+    <ul id="station-count-dropdown" class="radius-dropdown">
+      <li onclick="setStationCount(5)">5</li>
+      <li onclick="setStationCount(10)">10</li>
+      <li onclick="setStationCount(15)">15</li>
+      <li onclick="setStationCount(20)">20</li>
+      <li onclick="setStationCount(25)">25</li>
+    </ul>
+  </div>
+</div>
     <div class="container top-container">
       <h3>Radius</h3>
       <div class="radius-wrapper">
@@ -288,8 +301,8 @@
     </div>
 
     <!-- Untere Container -->
-    <div class="container full-width-container">Unterer Container 1</div>
-    <div class="container full-width-container">Unterer Container 2</div>
+    <div class="container full-width-container">grafische Analyse</div>
+    <div class="container full-width-container">tabellarische Wetterdaten</div>
   </div>
 
   <!-- Leaflet JS -->
@@ -304,6 +317,53 @@
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+
+    let stationMarkers = []; // Speichert alle Marker
+
+    function addStationMarkers() {
+        // Zuerst alte Marker entfernen
+        stationMarkers.forEach(marker => map.removeLayer(marker));
+        stationMarkers = [];
+
+        let rows = document.querySelectorAll("#station-table tr");
+        
+        rows.forEach(row => {
+            let stationName = row.cells[0].innerText;
+            let latitude = parseFloat(row.cells[1].innerText);
+            let longitude = parseFloat(row.cells[2].innerText);
+
+            // Marker mit Popup erstellen
+            let marker = L.marker([latitude, longitude]).addTo(map)
+                .bindPopup(`<b>${stationName}</b><br>Lat: ${latitude}, Lon: ${longitude}`)
+                .on('click', function () { // Klick-Event für den Marker
+                    selectStationInTable(stationName);
+                });
+
+            // Marker speichern, um sie später entfernen zu können
+            stationMarkers.push(marker);
+        });
+    }
+
+    // Stationen anzeigen, wenn die Seite geladen wird
+    document.addEventListener("DOMContentLoaded", addStationMarkers);
+
+    // Stationen aktualisieren, wenn die Anzahl geändert wird
+    document.getElementById("station-count-input").addEventListener("input", addStationMarkers);
+
+    function selectStationInTable(stationName) {
+      let rows = document.querySelectorAll("#station-table tr");
+
+      // Entfernt vorherige Auswahl
+      rows.forEach(row => row.classList.remove("selected"));
+
+      // Markiert die passende Zeile
+      rows.forEach(row => {
+          if (row.cells[0].innerText === stationName) {
+              row.classList.add("selected");
+              row.scrollIntoView({ behavior: "smooth", block: "center" }); // Scrollt zur ausgewählten Zeile
+          }
+      });
+  }
 
     function selectStation(row) {
       let rows = document.querySelectorAll("#station-table tr");
@@ -375,6 +435,30 @@
 
   // Event-Listener für den "Bestätigen"-Button
   document.querySelector(".button").addEventListener("click", saveSearchCriteria);
+
+  function validateStationCount(input) {
+    let value = input.value.replace(/[^0-9]/g, ''); // Entfernt alle nicht-numerischen Zeichen
+    input.value = value; // Setzt bereinigten Wert zurück
+  }
+
+  function toggleStationDropdown() {
+    let dropdown = document.getElementById("station-count-dropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+
+  function setStationCount(value) {
+    document.getElementById("station-count-input").value = value;
+    document.getElementById("station-count-dropdown").style.display = "none"; // Dropdown schließen
+  }
+
+  // Schließt das Dropdown, wenn außerhalb geklickt wird
+  document.addEventListener("click", function(event) {
+    let dropdown = document.getElementById("station-count-dropdown");
+    let wrapper = document.getElementById("station-count-input").parentElement;
+    if (!wrapper.contains(event.target)) {
+      dropdown.style.display = "none";
+    }
+  });
     </script>
 
 </body>
