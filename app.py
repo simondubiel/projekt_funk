@@ -57,16 +57,15 @@ def fetch_weather_data(station_id):
         return None
     return parse_ghcn_dly_from_string(response.text)
 
-def parse_ghcn_dly_from_string(data):
+ddef parse_ghcn_dly_from_string(data):
     """Parst die .dly-Daten in ein Pandas DataFrame."""
     colspecs = [(0, 11), (11, 15), (15, 17), (17, 21)] + [(21 + 8 * i, 26 + 8 * i) for i in range(31)]
     col_names = ['ID', 'YEAR', 'MONTH', 'ELEMENT'] + [f'DAY_{i+1}' for i in range(31)]
     df = pd.read_fwf(StringIO(data), colspecs=colspecs, names=col_names)
     df['ELEMENT'] = df['ELEMENT'].astype(str).str.strip()
     df.replace(-9999, None, inplace=True)
-    df['ELEMENT'] = df['ELEMENT'].astype(str)  # Sicherstellen, dass ELEMENT eine Zeichenkette bleibt
     df = df.melt(id_vars=['ID', 'YEAR', 'MONTH', 'ELEMENT'], var_name="DAY", value_name="VALUE")
-    df['DAY'] = df['DAY'].str.extract(r'(\d+)').astype(int)
+    df['DAY'] = df['DAY'].str.extract(r'(\d+)').astype(int)  # Fix für DAY-Spalte
     df['DATE'] = pd.to_datetime(df[['YEAR', 'MONTH', 'DAY']], errors='coerce')
     df.dropna(subset=['VALUE'], inplace=True)
     return df[['DATE', 'ELEMENT', 'VALUE']]
