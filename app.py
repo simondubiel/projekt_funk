@@ -64,7 +64,7 @@ def parse_ghcn_dly_from_string(data):
     df = pd.read_fwf(StringIO(data), colspecs=colspecs, names=col_names)
     df.replace(-9999, None, inplace=True)
     df = df.melt(id_vars=['ID', 'YEAR', 'MONTH', 'ELEMENT'], var_name="DAY", value_name="VALUE")
-    df['DAY'] = df['DAY'].str.extract('(\d+)').astype(int)
+    df['DAY'] = df['DAY'].str.extract(r'(\d+)').astype(int)
     df['DATE'] = pd.to_datetime(df[['YEAR', 'MONTH', 'DAY']], errors='coerce')
     df.dropna(subset=['VALUE'], inplace=True)
     return df[['DATE', 'ELEMENT', 'VALUE']]
@@ -87,3 +87,4 @@ def handle_global_error(error):
 
 if __name__ == "__main__":
     app.run(debug=True)
+    print()
