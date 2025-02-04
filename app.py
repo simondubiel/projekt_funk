@@ -63,6 +63,7 @@ def parse_ghcn_dly_from_string(data):
     col_names = ['ID', 'YEAR', 'MONTH', 'ELEMENT'] + [f'DAY_{i+1}' for i in range(31)]
     df = pd.read_fwf(StringIO(data), colspecs=colspecs, names=col_names)
     df.replace(-9999, None, inplace=True)
+    df['ELEMENT'] = df['ELEMENT'].astype(str)  # Sicherstellen, dass ELEMENT eine Zeichenkette bleibt
     df = df.melt(id_vars=['ID', 'YEAR', 'MONTH', 'ELEMENT'], var_name="DAY", value_name="VALUE")
     df['DAY'] = df['DAY'].str.extract(r'(\d+)').astype(int)
     df['DATE'] = pd.to_datetime(df[['YEAR', 'MONTH', 'DAY']], errors='coerce')
