@@ -19,7 +19,7 @@ def client():
 
 
 # ✅ **Test für `haversine()`**
-ddef test_haversine():
+def test_haversine():
     """Testet die Entfernung zwischen zwei Koordinaten."""
     dist = haversine(52.5200, 13.4050, 48.8566, 2.3522)  # Berlin → Paris
     assert round(dist, 2) == 877.46  # Erwartet 877,46 km Entfernung
