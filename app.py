@@ -36,7 +36,6 @@ def load_stations():
     colspecs = [(0, 11), (12, 20), (21, 30), (31, 37), (38, 40), (41, 71)]
     columns = ['ID', 'LATITUDE', 'LONGITUDE', 'ELEVATION', 'STATE', 'NAME']
     stations_df = pd.read_fwf(StringIO(stations_data), colspecs=colspecs, names=columns)
-    df['ELEMENT'] = df['ELEMENT'].astype(str).str.strip()
     stations_df.dropna(subset=['LATITUDE', 'LONGITUDE'], inplace=True)
     return stations_df
 
@@ -63,6 +62,7 @@ def parse_ghcn_dly_from_string(data):
     colspecs = [(0, 11), (11, 15), (15, 17), (17, 21)] + [(21 + 8 * i, 26 + 8 * i) for i in range(31)]
     col_names = ['ID', 'YEAR', 'MONTH', 'ELEMENT'] + [f'DAY_{i+1}' for i in range(31)]
     df = pd.read_fwf(StringIO(data), colspecs=colspecs, names=col_names)
+    df['ELEMENT'] = df['ELEMENT'].astype(str).str.strip()
     df.replace(-9999, None, inplace=True)
     df['ELEMENT'] = df['ELEMENT'].astype(str)  # Sicherstellen, dass ELEMENT eine Zeichenkette bleibt
     df = df.melt(id_vars=['ID', 'YEAR', 'MONTH', 'ELEMENT'], var_name="DAY", value_name="VALUE")
