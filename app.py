@@ -57,7 +57,7 @@ def fetch_weather_data(station_id):
         return None
     return parse_ghcn_dly_from_string(response.text)
 
-ddef parse_ghcn_dly_from_string(data):
+def parse_ghcn_dly_from_string(data):
     """Parst die .dly-Daten in ein Pandas DataFrame."""
     colspecs = [(0, 11), (11, 15), (15, 17), (17, 21)] + [(21 + 8 * i, 26 + 8 * i) for i in range(31)]
     col_names = ['ID', 'YEAR', 'MONTH', 'ELEMENT'] + [f'DAY_{i+1}' for i in range(31)]
