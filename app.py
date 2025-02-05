@@ -50,25 +50,30 @@ def fetch_and_filter_stations(lat, lon, radius_km):
     return stations_df[stations_df["DISTANCE"] <= radius_km].sort_values(by="DISTANCE")
 
 def fetch_weather_data(station_id):
-    """Lädt Wetterdaten für eine Station von der NOAA-Website herunter."""
-    station_url = f"{GHCN_BASE_URL}all/{station_id}.dly"
+    """Lädt Wetterdaten für eine Station von der NOAA-Website als CSV-Datei."""
+    station_url = f"{GHCN_BASE_URL}by_station/{station_id}.csv"
     response = requests.get(station_url)
+    
     if response.status_code != 200:
         return None
-    return parse_ghcn_dly_from_string(response.text)
+    
+    return parse_ghcn_csv_from_string(response.text)
 
-def parse_ghcn_dly_from_string(data):
-    """Parst die .dly-Daten in ein Pandas DataFrame."""
-    colspecs = [(0, 11), (11, 15), (15, 17), (18, 22)] + [(22 + 8 * i, 27 + 8 * i) for i in range(31)]
-    col_names = ['ID', 'YEAR', 'MONTH', 'ELEMENT'] + [f'DAY_{i+1}' for i in range(31)]
-    df = pd.read_fwf(StringIO(data), colspecs=colspecs, names=col_names)
-    df['ELEMENT'] = df['ELEMENT'].astype(str).str.strip()
-    df.replace(-9999, None, inplace=True)
-    df = df.melt(id_vars=['ID', 'YEAR', 'MONTH', 'ELEMENT'], var_name="DAY", value_name="VALUE")
-    df['DAY'] = df['DAY'].str.extract(r'(\d+)').astype(int)  # Fix für DAY-Spalte
-    df['DATE'] = pd.to_datetime(df[['YEAR', 'MONTH', 'DAY']], errors='coerce')
-    df.dropna(subset=['VALUE'], inplace=True)
-    return df[['DATE', 'ELEMENT', 'VALUE']]
+def parse_ghcn_csv_from_string(data):
+    """Parst die CSV-Daten in ein Pandas DataFrame."""
+    col_names = ["ID", "DATE", "ELEMENT", "VALUE", "M-FLAG", "Q-FLAG", "S-FLAG", "OBS-TIME"]
+    df = pd.read_csv(StringIO(data), names=col_names, dtype=str)
+    
+    # Konvertiere das Datum in datetime-Format
+    df["DATE"] = pd.to_datetime(df["DATE"], format="%Y%m%d", errors="coerce")
+    
+    # Wandle den Wertebereich um und entferne ungültige Werte (-9999)
+    df["VALUE"] = pd.to_numeric(df["VALUE"], errors="coerce")
+    df.loc[df["VALUE"] == -9999, "VALUE"] = None
+    
+    df.dropna(subset=["VALUE"], inplace=True)
+
+    return df[["DATE", "ELEMENT", "VALUE"]]
 
 @app.route('/get_weather_data', methods=['GET'])
 def get_weather_data():
@@ -88,4 +93,3 @@ def handle_global_error(error):
 
 if __name__ == "__main__":
     app.run(debug=True)
-    print()

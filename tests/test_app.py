@@ -5,7 +5,7 @@ from app import (
     fetch_and_filter_stations,
     fetch_weather_data,
     load_stations,
-    parse_ghcn_dly_from_string,
+    parse_ghcn_csv_from_string,  # Geänderte Funktion für CSV
     app,
 )
 
@@ -18,14 +18,14 @@ def client():
         yield client
 
 
-# ✅ **Test für `haversine()`**
+# **Test für `haversine()`**
 def test_haversine():
     """Testet die Entfernung zwischen zwei Koordinaten."""
     dist = haversine(52.5200, 13.4050, 48.8566, 2.3522)  # Berlin → Paris
     assert round(dist, 2) == 877.46  # Erwartet 877,46 km Entfernung
 
 
-# ✅ **Test für `load_stations()`**
+# **Test für `load_stations()`**
 def test_load_stations(monkeypatch):
     """Testet das Laden der Wetterstationen."""
     mock_data = "USW00094728   40.783  -73.967  39.9 NY NEW YORK CITY CENTRAL PARK"
@@ -44,7 +44,7 @@ def test_load_stations(monkeypatch):
     assert stations_df.iloc[0]["ID"] == "USW00094728"
 
 
-# ✅ **Test für `fetch_and_filter_stations()`**
+# **Test für `fetch_and_filter_stations()`**
 def test_fetch_and_filter_stations(monkeypatch):
     """Testet das Filtern von Wetterstationen nach Koordinaten und Radius."""
     mock_data = "USW00094728   40.783  -73.967  39.9 NY NEW YORK CITY CENTRAL PARK"
@@ -63,10 +63,11 @@ def test_fetch_and_filter_stations(monkeypatch):
     assert filtered_stations.iloc[0]["ID"] == "USW00094728"
 
 
-# ✅ **Test für `fetch_weather_data()`**
+# **Test für `fetch_weather_data()` mit CSV**
 def test_fetch_weather_data(monkeypatch):
-    """Testet den Abruf von Wetterdaten für eine bestimmte Station."""
-    mock_data = "USW00094728 20230101 TMAX  30  -9999  50  40  -9999  -9999"
+    """Testet den Abruf von Wetterdaten für eine bestimmte Station aus CSV-Dateien."""
+    mock_data = """USW00094728,20230101,TMAX,30,M,X,S,0700
+USW00094728,20230102,TMIN,10,M,X,S,0700"""
 
     def mock_requests_get(*args, **kwargs):
         class MockResponse:
@@ -81,22 +82,27 @@ def test_fetch_weather_data(monkeypatch):
     assert "DATE" in weather_data.columns
     assert "ELEMENT" in weather_data.columns
     assert "VALUE" in weather_data.columns
+    assert weather_data.iloc[0]["ELEMENT"] == "TMAX"
+    assert weather_data.iloc[1]["ELEMENT"] == "TMIN"
 
 
-# ✅ **Test für `parse_ghcn_dly_from_string()`**
-def test_parse_ghcn_dly_from_string():
-    """Testet das Parsen der NOAA .dly-Daten."""
-    mock_data = "USW00094728 20230101 TMAX  30  -9999  50  40  -9999  -9999"
-    df = parse_ghcn_dly_from_string(mock_data)
+# **Test für `parse_ghcn_csv_from_string()`**
+def test_parse_ghcn_csv_from_string():
+    """Testet das Parsen der NOAA CSV-Daten."""
+    mock_data = """USW00094728,20230101,TMAX,30,M,X,S,0700
+USW00094728,20230102,TMIN,10,M,X,S,0700"""
+    
+    df = parse_ghcn_csv_from_string(mock_data)
 
     assert not df.empty
     assert "DATE" in df.columns
     assert "ELEMENT" in df.columns
     assert "VALUE" in df.columns
     assert df.iloc[0]["ELEMENT"] == "TMAX"
+    assert df.iloc[1]["ELEMENT"] == "TMIN"
 
 
-# ✅ **API-Test: `/get_weather_data` ohne Parameter**
+# **API-Test: `/get_weather_data` ohne Parameter**
 def test_get_weather_data_missing_param(client):
     """Testet den API-Endpunkt `/get_weather_data` ohne `station_id`."""
     response = client.get(f"{BASE_URL}/get_weather_data")
@@ -104,7 +110,7 @@ def test_get_weather_data_missing_param(client):
     assert response.json["error"] == "No station ID provided"
 
 
-# ✅ **API-Test: `/get_weather_data` mit ungültiger Station**
+# **API-Test: `/get_weather_data` mit ungültiger Station**
 def test_get_weather_data_invalid_station(client, monkeypatch):
     """Testet den API-Endpunkt `/get_weather_data` mit ungültiger `station_id`."""
     
@@ -118,7 +124,7 @@ def test_get_weather_data_invalid_station(client, monkeypatch):
     assert "error" in response.json
 
 
-# ✅ **API-Test: `/` (Index-Seite)**
+# **API-Test: `/` (Index-Seite)**
 def test_index_page(client):
     """Testet, ob die Index-Seite korrekt geladen wird."""
     response = client.get("/")
