@@ -91,5 +91,10 @@ def handle_global_error(error):
     response = {"error": "Ein unerwarteter Fehler ist aufgetreten.", "details": str(error)}
     return jsonify(response), 500
 
+if app.config["TESTING"]:
+    @app.route("/error")
+    def error():
+        raise Exception("Simulierter Fehler")
+
 if __name__ == "__main__":
     app.run(debug=True)

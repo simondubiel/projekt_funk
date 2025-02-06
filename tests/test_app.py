@@ -163,15 +163,8 @@ def test_index_page(client):
 
 
 # **Test für den globalen Fehlerhandler**
-def test_global_error_handler(client, monkeypatch):
+def test_global_error_handler(client):
     """Testet, ob unerwartete Fehler korrekt abgefangen werden."""
-
-    def mock_route_error():
-        raise Exception("Simulierter Fehler")
-
-    # Neue Testroute hinzufügen, um den Fehlerhandler zu testen
-    app.add_url_rule("/error", "error", mock_route_error)
-
-    response = client.get("/error")  # Ruft die absichtlich fehlerhafte Route auf
+    response = client.get("/error")
     assert response.status_code == 500
     assert "Ein unerwarteter Fehler ist aufgetreten." in response.json["error"]
