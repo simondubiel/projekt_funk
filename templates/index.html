@@ -1,110 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask Web App</title>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    
-    <!-- Eigene CSS-Datei -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flask Web App</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  
+  <!-- Eigene CSS-Datei -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <div class="grid-layout">
-        <!-- Obere 4 Container -->
-        <div class="container top-container">
-            <h3>Stationen</h3>
-            <p>10000</p>
-        </div>
-
-        <div class="container top-container">
-            <h3>Anzahl der Stationen</h3>
-            <div class="dropdown-wrapper">
-                <input type="text" id="station-count-input" class="dropdown-input" value="10" placeholder="Anzahl auswählen">
-                <button class="dropdown-btn" data-target="station-count-dropdown">▼</button>
-                <ul id="station-count-dropdown" class="dropdown-list">
-                    <li onclick="setStationCount(5)">5</li>
-                    <li onclick="setStationCount(10)">10</li>
-                    <li onclick="setStationCount(15)">15</li>
-                    <li onclick="setStationCount(20)">20</li>
-                    <li onclick="setStationCount(25)">25</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="container top-container">
-            <h3>Radius</h3>
-            <div class="dropdown-wrapper">
-                <input type="text" id="radius-input" class="dropdown-input" value="10" placeholder="Radius auswählen">
-                <button class="dropdown-btn" data-target="radius-dropdown">▼</button>
-                <ul id="radius-dropdown" class="dropdown-list">
-                    <li onclick="setRadiusValue(10)">10 km</li>
-                    <li onclick="setRadiusValue(20)">20 km</li>
-                    <li onclick="setRadiusValue(50)">50 km</li>
-                    <li onclick="setRadiusValue(100)">100 km</li>
-                    <li onclick="setRadiusValue(200)">200 km</li>
-                    <li onclick="setRadiusValue(500)">500 km</li>
-                    <li onclick="setRadiusValue(1000)">1000 km</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="container top-container">
-            <h3>Zeitraum</h3>
-            <div class="date-container">
-                <label for="start-date">Startdatum:</label>
-                <input type="number" id="start-year" class="date-input" value="2024" min="1900" max="2100">
-                <label for="end-date">Enddatum:</label>
-                <input type="number" id="end-year" class="date-input" value="2024" min="1900" max="2100">
-            </div>
-        </div>
-
-        <!-- Mittelbereich -->
-        <div class="container large-container">
-            <div id="map"></div> <!-- Leaflet Map Container -->
-        </div>
-
-        <div class="right-containers">
-            <div class="container small-container">
-                <h3>Koordinaten</h3>
-                <input type="text" id="latitude" class="input-field" placeholder="Latitude">
-                <input type="text" id="longitude" class="input-field" placeholder="Longitude">
-                <button class="button" id="confirm-btn">Bestätigen</button>
-            </div>
-            <div class="container small-container">
-                <h3>Verfügbare Stationen</h3>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Latitude</th>
-                                <th>Longitude</th>
-                            </tr>
-                        </thead>
-                        <tbody id="station-table">
-                            
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Untere Container -->
-        <div id="weather-data-container" class="container full-width-container">
-            <h3>Weather Data</h3>
-            <p>Select a station to view data.</p>
-        </div>
-        <div class="container full-width-container">Unterer Container 1</div>
-        <div class="container full-width-container">Unterer Container 2</div>
+  <div class="grid-layout">
+    <!-- Obere 4 Container -->
+    <div class="container top-container">
+      <h3>Stationen</h3>
+      <p>10000</p>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <div class="container top-container">
+      <h3>Anzahl der Stationen</h3>
+      <div class="dropdown-wrapper">
+        <input type="text" id="station-count-input" class="dropdown-input" value="10" placeholder="Anzahl auswählen">
+        <button class="dropdown-btn" data-target="station-count-dropdown">▼</button>
+        <ul id="station-count-dropdown" class="dropdown-list">
+          <li onclick="setStationCount(5)">5</li>
+          <li onclick="setStationCount(10)">10</li>
+          <li onclick="setStationCount(15)">15</li>
+          <li onclick="setStationCount(20)">20</li>
+          <li onclick="setStationCount(25)">25</li>
+        </ul>
+      </div>
+    </div>
 
-    <!-- Eigene JavaScript-Datei -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <div class="container top-container">
+      <h3>Radius</h3>
+      <div class="dropdown-wrapper">
+        <input type="text" id="radius-input" class="dropdown-input" value="10" placeholder="Radius auswählen">
+        <button class="dropdown-btn" data-target="radius-dropdown">▼</button>
+        <ul id="radius-dropdown" class="dropdown-list">
+          <li onclick="setRadiusValue(10)">10 km</li>
+          <li onclick="setRadiusValue(20)">20 km</li>
+          <li onclick="setRadiusValue(50)">50 km</li>
+          <li onclick="setRadiusValue(100)">100 km</li>
+          <li onclick="setRadiusValue(200)">200 km</li>
+          <li onclick="setRadiusValue(500)">500 km</li>
+          <li onclick="setRadiusValue(1000)">1000 km</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="container top-container">
+      <h3>Zeitraum</h3>
+      <div class="date-container">
+        <label for="start-date">Startjahr:</label>
+        <input type="number" id="start-year" class="date-input" value="2024" min="1900" max="2100">
+        <label for="end-date">Endjahr:</label>
+        <input type="number" id="end-year" class="date-input" value="2024" min="1900" max="2100">
+      </div>
+    </div>
+
+    <!-- Mittelbereich -->
+    <div class="container large-container">
+      <div id="map"></div>
+    </div>
+
+    <div class="right-containers">
+      <div class="container small-container">
+        <h3>Koordinaten</h3>
+        <input type="text" id="latitude" class="input-field" placeholder="Latitude">
+        <input type="text" id="longitude" class="input-field" placeholder="Longitude">
+        <button class="button" id="confirm-btn">Bestätigen</button>
+      </div>
+      <div class="container small-container">
+        <h3>Verfügbare Stationen</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Name</th>
+              </tr>
+            </thead>
+            <tbody id="station-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Untere Container -->
+    <div id="chart-container" class="container full-width-container">
+      <h3>Wetterdaten Grafisch</h3>
+      <div id="d3-chart"></div>
+      <div id="chart-legend"></div>
+    </div>
+    <div id="data-table-container" class="container full-width-container">
+      <h3>Wetterdaten Tabelle</h3>
+      <div id="d3-data-table"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <!-- D3.js -->
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <!-- Eigene JavaScript-Datei -->
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
