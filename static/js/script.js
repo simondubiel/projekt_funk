@@ -1,7 +1,8 @@
-/* ------------------ Hilfsfunktion ------------------ */
+/* ------------------ Hilfsfunktion&Variable ------------------ */
 function getInputValue(id) {
   return document.getElementById(id).value.trim();
 }
+let lat_positive;
 
 /* ------------------ Leaflet Map Initialization ------------------ */
 var map = L.map('map').setView([52.52, 13.40], 5);
@@ -24,6 +25,13 @@ function updateMapMarker() {
   let longitude = parseFloat(lonStr);
   if (isNaN(latitude) || isNaN(longitude)) {
     return;
+  }
+  //Integrierte Hilfsfunktion für Bestimmung der Halbkugel
+  if latitude > 0 {
+    lat_positive = true;
+  } 
+  else {
+    lat_positive = false;
   }
   if (marker) {
     marker.setLatLng([latitude, longitude]);
@@ -196,11 +204,20 @@ function processWeatherData(data) {
 
   function getSeason(date) {
     let month = date.getMonth() + 1;
-    if (month === 12 || month === 1 || month === 2) return "Winter";
-    else if (month >= 3 && month <= 5) return "Spring";
-    else if (month >= 6 && month <= 8) return "Summer";
-    else if (month >= 9 && month <= 11) return "Autumn";
+    if (lat_poosotive === true) {
+      if (month === 12 || month === 1 || month === 2) return "Winter";
+      else if (month >= 3 && month <= 5) return "Spring";
+      else if (month >= 6 && month <= 8) return "Summer";
+      else if (month >= 9 && month <= 11) return "Autumn";
+    }
+    else { // Wenn die Halbkugel negativ ist
+      if (month === 12 || month === 1 || month === 2) return "Summer";
+      else if (month >= 3 && month <= 5) return "Autumn";
+      else if (month >= 6 && month <= 8) return "Winter";
+      else if (month >= 9 && month <= 11) return "Spring";
+    }
   }
+
   function getSeasonYear(date) {
     let year = date.getFullYear();
     let month = date.getMonth() + 1;
@@ -399,7 +416,7 @@ function drawDataTable(dataset) {
         seasonalData[key][`Seasonal TMAX ${d.season}`] = d.value;
       }
     });
-    let tableHTML = "<h4>Seasonal Data</h4><table border='1'><thead><tr><th>Year</th><th>Season</th>";
+    let tableHTML = "<h4>Seasonal Data</h4><table border='1'><thead><tr><th>Year</th>";
     seasonalSeries.forEach(series => {
       tableHTML += `<th>${series}</th>`;
     });
