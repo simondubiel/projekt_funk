@@ -68,13 +68,13 @@
 
     <div class="right-containers">
       <div class="container small-container">
-        <h3>Koordinaten</h3>
+        <p class="BoxHeading">Koordinaten</p>
         <input type="text" id="latitude" class="input-field" placeholder="Latitude">
         <input type="text" id="longitude" class="input-field" placeholder="Longitude">
         <button class="button" id="confirm-btn">Bestätigen</button>
       </div>
       <div class="container small-container">
-        <h3>Verfügbare Stationen</h3>
+        <p class="BoxHeading">Verfügbare Stationen</p>
         <div class="table-container">
           <table>
             <thead>
@@ -93,12 +93,14 @@
 
     <!-- Untere Container -->
     <div id="chart-container" class="container full-width-container">
-      <h3>Wetterdaten Grafisch</h3>
-      <div id="d3-chart"></div>
-      <div id="chart-legend"></div>
+      <p class="BoxHeading">Wetterdaten Grafisch</p>
+      <div id="chart-content">
+        <div id="d3-chart"></div>
+        <div id="chart-legend"></div>
+      </div>
     </div>
     <div id="data-table-container" class="container full-width-container">
-      <h3>Wetterdaten Tabelle</h3>
+      <p class="BoxHeading">Wetterdaten Tabelle</p>
       <div id="d3-data-table"></div>
     </div>
   </div>

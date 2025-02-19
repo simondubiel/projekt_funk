@@ -7,6 +7,10 @@ body {
   background-size: cover;
 }
 
+.BoxHeading {
+  font-size: 20px;
+  font-weight: bold;
+}
 /* Container Styling */
 .container {
   background: rgba(255, 255, 255, 0.8);
@@ -152,7 +156,7 @@ body {
 /* Vollbreite Container */
 .full-width-container {
   grid-column: span 4;
-  height: 150px;
+  height: auto;
 }
 
 /* Datumseingabe */
@@ -272,4 +276,18 @@ tbody tr.selected {
   .grid-layout {
       grid-template-columns: 1fr;
   }
+}
+
+#chart-content {
+  display: flex;
+  align-items: flex-start; /* Aligns both items at the top */
+}
+
+#d3-chart {
+  flex: 1; /* Chart takes available space */
+}
+
+#chart-legend {
+  width: 200px;  /* Adjust width as needed */
+  margin-left: 20px; /* Space between chart and legend */
 }

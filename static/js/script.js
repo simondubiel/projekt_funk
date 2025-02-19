@@ -2,6 +2,7 @@
 function getInputValue(id) {
   return document.getElementById(id).value.trim();
 }
+let latitude_positive;
 
 /* ------------------ Leaflet Map Initialization ------------------ */
 var map = L.map('map').setView([52.52, 13.40], 5);
@@ -31,6 +32,13 @@ function updateMapMarker() {
     marker = L.marker([latitude, longitude]).addTo(map);
   }
   map.setView([latitude, longitude], 10);
+  //Ergänzung zur Bestimmung der Halbkugel
+  if (latitude >= 0) {
+    latitude_positive = true;
+  }
+  else {
+    latitude_positive = false;
+  }
 }
 
 /* ------------------ Update Radius Circle ------------------ */
@@ -177,6 +185,7 @@ function processWeatherData(data) {
   data.forEach(d => {
     d.DATE = new Date(d.DATE);
     d.VALUE = +d.VALUE;
+    d.VALUE = d.VALUE / 10;  // Umrechnung von 0.1 Grad Celsius in Grad Celsius
   });
   
   let tminData = data.filter(d => d.ELEMENT === "TMIN");
@@ -196,11 +205,20 @@ function processWeatherData(data) {
 
   function getSeason(date) {
     let month = date.getMonth() + 1;
-    if (month === 12 || month === 1 || month === 2) return "Winter";
-    else if (month >= 3 && month <= 5) return "Spring";
-    else if (month >= 6 && month <= 8) return "Summer";
-    else if (month >= 9 && month <= 11) return "Autumn";
+    if (latitude_positive) {
+      if (month === 12 || month === 1 || month === 2) return "Winter";
+      else if (month >= 3 && month <= 5) return "Spring";
+      else if (month >= 6 && month <= 8) return "Summer";
+      else if (month >= 9 && month <= 11) return "Autumn";
+    }
+    else {
+      if (month === 12 || month === 1 || month === 2) return "Summer";
+      else if (month >= 3 && month <= 5) return "Autumn";
+      else if (month >= 6 && month <= 8) return "Winter";
+      else if (month >= 9 && month <= 11) return "Spring";
+    }
   }
+
   function getSeasonYear(date) {
     let year = date.getFullYear();
     let month = date.getMonth() + 1;
@@ -349,7 +367,7 @@ function drawDataTable(dataset) {
   let tableContainer = document.getElementById("d3-data-table");
   tableContainer.innerHTML = "";
   
-  // Tabelle für jährliche Daten
+  // ---------------- Annual Data Table ----------------
   let annualSeries = visibleSeries.filter(name => name.startsWith("Annual"));
   if (annualSeries.length > 0) {
     let annualData = {};
@@ -381,34 +399,39 @@ function drawDataTable(dataset) {
     tableContainer.innerHTML += tableHTML;
   }
   
-  // Tabelle für saisonale Daten
+  // ---------------- Seasonal Data Table (grouped by year) ----------------
   let seasonalSeries = visibleSeries.filter(name => name.startsWith("Seasonal"));
   if (seasonalSeries.length > 0) {
     let seasonalData = {};
+    // Process Seasonal TMIN data
     dataset.seasonalTmin.forEach(d => {
-      let key = d.year + "-" + d.season;
-      if (!seasonalData[key]) seasonalData[key] = {year: d.year, season: d.season};
-      if (seasonalSeries.includes(`Seasonal TMIN ${d.season}`)) {
-        seasonalData[key][`Seasonal TMIN ${d.season}`] = d.value;
+      let key = d.year;  // group by year only
+      if (!seasonalData[key]) seasonalData[key] = { year: d.year };
+      let seriesName = `Seasonal TMIN ${d.season}`;
+      if (seasonalSeries.includes(seriesName)) {
+        seasonalData[key][seriesName] = d.value;
       }
     });
+    // Process Seasonal TMAX data
     dataset.seasonalTmax.forEach(d => {
-      let key = d.year + "-" + d.season;
-      if (!seasonalData[key]) seasonalData[key] = {year: d.year, season: d.season};
-      if (seasonalSeries.includes(`Seasonal TMAX ${d.season}`)) {
-        seasonalData[key][`Seasonal TMAX ${d.season}`] = d.value;
+      let key = d.year;  // group by year only
+      if (!seasonalData[key]) seasonalData[key] = { year: d.year };
+      let seriesName = `Seasonal TMAX ${d.season}`;
+      if (seasonalSeries.includes(seriesName)) {
+        seasonalData[key][seriesName] = d.value;
       }
     });
-    let tableHTML = "<h4>Seasonal Data</h4><table border='1'><thead><tr><th>Year</th><th>Season</th>";
+    
+    let tableHTML = "<h4>Seasonal Data</h4><table border='1'><thead><tr><th>Year</th>";
     seasonalSeries.forEach(series => {
       tableHTML += `<th>${series}</th>`;
     });
     tableHTML += "</tr></thead><tbody>";
-    Object.keys(seasonalData).sort().forEach(key => {
-      let row = seasonalData[key];
-      tableHTML += `<tr><td>${row.year}</td><td>${row.season}</td>`;
+    Object.keys(seasonalData).sort().forEach(year => {
+      let row = seasonalData[year];
+      tableHTML += `<tr><td>${row.year}</td>`;
       seasonalSeries.forEach(series => {
-        tableHTML += `<td>${row[series] ? row[series].toFixed(2) : ""}</td>`;
+        tableHTML += `<td>${row[series] !== undefined ? row[series].toFixed(2) : ""}</td>`;
       });
       tableHTML += "</tr>";
     });
