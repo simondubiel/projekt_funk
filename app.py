@@ -17,7 +17,10 @@ cached_stations = None
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    # Ensure stations are loaded (or trigger loading if not already done)
+    stations = load_stations()
+    station_count = len(stations) if stations is not None else 0
+    return render_template("index.html", station_count=station_count)
 
 def haversine(lat1, lon1, lat2, lon2):
     """Berechnet die Entfernung zwischen zwei Punkten auf der Erde in km."""

@@ -7,6 +7,13 @@ body {
   background-size: cover;
 }
 
+/* Ensure all elements use border-box sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .BoxHeading {
   font-size: 20px;
   font-weight: bold;
@@ -14,6 +21,14 @@ body {
 /* Container Styling */
 .container {
   background: rgba(255, 255, 255, 0.8);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.less_transparent_container {
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
   padding: 15px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -53,17 +68,8 @@ body {
   justify-content: center; /* Vertikale Zentrierung */
   width: 100%; /* Passt sich an Containerbreite an */
   position: relative;
+  margin: 0 auto; /* Zentriert das Dropdown-Menü */
 }
-
-.dropdown-input {
-  width: 50px; /* Klein genug für 4-stellige Zahl */
-  height: 30px; /* Höhe verringern */
-  font-size: 14px; /* Kleinere Schriftgröße */
-  padding: 4px;
-  text-align: center;
-}
-
-
 
 .dropdown-input {
   width: 100%; /* Nutzt die gesamte Breite des Wrappers */
@@ -77,20 +83,21 @@ body {
 
 .dropdown-btn {
   position: absolute;
-  right: 5px; /* Direkt an den rechten Rand setzen */
+  top: 0; /* Direkt an den oberen Rand setzen */
+  right: 0; /* Direkt an den rechten Rand setzen */
+  height: 100%; /* Gleiche Höhe wie das Input-Feld */
+  padding: 0; /* Kein zusätzlicher Abstand */
+  margin: 0; /* Kein zusätzlicher Abstand */
+  width: 5%; /* Breite des Buttons */
+  min-width: 20px;
+  overflow-y: auto; /* Scrollbar bei Bedarf anzeigen */
   background: transparent;
-  border: none;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  list-style: none;
+  z-index: 1000; /* Stellt sicher, dass das Dropdown-Menü über anderen Elementen liegt */
   cursor: pointer;
   font-size: 14px;
-}
-
-
-.dropdown-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100px; /* Definiert eine feste Breite */
 }
 
 .dropdown-list {
@@ -98,6 +105,8 @@ body {
   top: 100%; /* Direkt unter das Eingabefeld setzen */
   left: 0;
   width: 100%; /* Gleiche Breite wie das Input-Feld */
+  max-width: 100%; /* Maximale Breite */
+  box-sizing: border-box; /* Inkludiert Padding und Border in die Breite */
   background: white;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -105,7 +114,9 @@ body {
   list-style: none;
   padding: 0;
   margin-top: 2px; /* Kleiner Abstand für bessere Lesbarkeit */
-  z-index: 1000;
+  z-index: 1000; /* Stellt sicher
+  dass das Dropdown-Menü über anderen Elementen liegt */
+  overflow: hidden; /* Versteckt überstehende Elemente */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -113,7 +124,7 @@ body {
   padding: 8px;
   text-align: center;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .dropdown-list li:hover {
@@ -121,10 +132,16 @@ body {
   color: white;
 }
 
+/* Media query for smaller screens, if needed */
+@media (max-width: 600px) {
+  .dropdown-wrapper {
+    max-width: 100%;
+  }
+}
+
 /* Karte */
 .large-container {
   grid-column: span 2;
-  height: 400px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -146,7 +163,7 @@ body {
 }
 
 .small-container {
-  height: 160px;
+  height: auto; /* Passt sich dem Inhalt an */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -192,7 +209,7 @@ body {
 /* Tabellen */
 .table-container {
   width: 100%;
-  height: 100%;
+  max-height: 150px;
   overflow-y: auto;
 }
 
@@ -280,14 +297,74 @@ tbody tr.selected {
 
 #chart-content {
   display: flex;
+  flex-wrap: wrap;
+  flex-direction: row; /* Aligns items horizontally */
   align-items: flex-start; /* Aligns both items at the top */
+  gap: 20px; /* Space between chart and legend */
 }
 
 #d3-chart {
-  flex: 1; /* Chart takes available space */
+  width: 100%;
+  height: auto;
+  overflow: visible; /* oder overflow: auto, falls du Scrollen möchtest */
+  margin-right: 20px; /* Space between chart and legend */
+  flex: 1; /* Takes up remaining space */
+  min-width: 300px;
+}
+
+/* Achsen-Styling: Linien und Texte */
+.axis path,
+.axis line {
+  stroke: gray;         /* Farbe der Achsenlinien */
+  stroke-width: 1.5px;      /* Dicke der Linien */
+}
+
+.axis text {
+  fill: gray;         /* Farbe der Achsenbeschriftungen */
+  font-size: 14px;        /* Schriftgröße der Tick-Beschriftungen */
 }
 
 #chart-legend {
+  border: 1px solid gray;  /* Border around legend */
+  border-radius: 5px;     /* Rounded corners */
+  padding: 10px;        /* Padding inside legend */
   width: 200px;  /* Adjust width as needed */
   margin-left: 20px; /* Space between chart and legend */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  align-items: left; /* Aligns items to the left */
+  display: inline-block;
+  flex-direction: column; /* Aligns items vertically */
+  gap: 5px; /* Space between legend items */
+  white-space: nowrap;
+  min-width: 100px;
+ }
+
+/* Make the SVG itself scale within its container */
+.svg-content-responsive {
+  width: 100%;
+  height: auto;        /* Keep aspect ratio */
+  display: block;
+}
+
+.legend-item {
+  display: block;
+  white-space: nowrap; 
+  flex-direction: row;
+  align-items: flex-start;  
+  justify-content: flex-start;
+  margin-bottom: 5px;
+}
+
+.legend-item input[type:"checkbox"] {
+  align-self: flex-start;
+  vertical-align: middle;
+  margin-top: 0; 
+  margin-right: 5px;
+}
+
+.legend-item label {
+  /* Optionally force inline-block so vertical-align applies */
+  display: inline-block;
+  vertical-align: top; 
+  white-space: nowrap;
 }

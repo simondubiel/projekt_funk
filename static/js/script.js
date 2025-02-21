@@ -111,14 +111,16 @@ async function fetchStationData() {
   let radius = getInputValue("radius-input");
   let latitude = getInputValue("latitude");
   let longitude = getInputValue("longitude");
+  let startYear = getInputValue("start-year");
+  let endYear = getInputValue("end-year");
 
   // Prüfen, ob alle Werte vorhanden sind
-  if (latitude === "" || longitude === "" || radius === "" || stationCount === "") {
+  if (latitude === "" || longitude === "" || radius === "" || stationCount === "" || startYear === "" || endYear === "") {
     console.error("Nicht alle Suchkriterien sind gesetzt.");
     return;
   }
   // Query-Parameter sicher zusammenbauen
-  let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radius)}&station_count=${encodeURIComponent(stationCount)}`;
+  let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radius)}&station_count=${encodeURIComponent(stationCount)}&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`;
   let fetchUrl = `/get_stations${queryParams}`;
   console.log("Fetching Stations from:", fetchUrl);
   try {
@@ -277,18 +279,33 @@ function drawChart(dataset) {
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
   
+  // Alle Datensätze zusammenfassen
   let allAnnual = dataset.annualTmin.concat(dataset.annualTmax);
-  let xDomain = d3.extent(allAnnual, d => d.year);
-  let yDomain = d3.extent(allAnnual, d => d.value);
   
+  // Bestimme den minimalen und maximalen Wert und sorge dafür, dass 0 enthalten ist,
+  // und erweitere den Bereich um 4 Grad an beiden Enden.
+  let yMin = d3.min(allAnnual, d => d.value);
+  let yMax = d3.max(allAnnual, d => d.value);
+  yMin = Math.min(yMin, 0) - 4;
+  yMax = Math.max(yMax, 0) + 4;
+  
+  let xExtent = d3.extent(allAnnual, d => d.year+1);
+  let left = xExtent[0] - 1.05;
+  let right = xExtent[1];
+  let xDomain = [left, right];
+
   let x = d3.scaleLinear().domain(xDomain).range([0, width]);
-  let y = d3.scaleLinear().domain(yDomain).range([height, 0]);
+  let y = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
   
+  // x-Achse bei y=0 zeichnen
   svg.append("g")
-    .attr("transform", "translate(0," + height + ")")
+    .attr("class", "axis x-axis")
+    .attr("transform", "translate(0," + y(0) + ")")
     .call(d3.axisBottom(x).tickFormat(d3.format("d")));
   
+  // y-Achse zeichnen
   svg.append("g")
+    .attr("class", "axis y-axis")
     .call(d3.axisLeft(y));
   
   let lineGenerator = d3.line()
@@ -310,10 +327,10 @@ function drawChart(dataset) {
     .entries(dataset.seasonalTmax);
   
   seasonalGroupsTmin.forEach(group => {
-    lines.push({name: `Seasonal TMIN ${group.key}`, data: group.values, color: "lightblue", visible: true});
+    lines.push({name: `TMIN ${group.key}`, data: group.values, color: "lightblue", visible: true});
   });
   seasonalGroupsTmax.forEach(group => {
-    lines.push({name: `Seasonal TMAX ${group.key}`, data: group.values, color: "pink", visible: true});
+    lines.push({name: `TMAX ${group.key}`, data: group.values, color: "pink", visible: true});
   });
   
   // Linien zeichnen
@@ -329,7 +346,11 @@ function drawChart(dataset) {
   });
   
   // Legende mit Checkboxes
-  let legend = d3.select("#chart-legend").append("div");
+  let legendContainer = d3.select("#chart-legend");
+legendContainer.html(""); // Clear previous content
+
+if (lines && lines.length > 0) {
+  let legend = legendContainer.append("div");
   lines.forEach(lineData => {
     let legendItem = legend.append("div");
     legendItem.append("input")
@@ -346,6 +367,7 @@ function drawChart(dataset) {
       .text(lineData.name)
       .style("color", lineData.color);
   });
+}
 }
 
 function updateChartVisibility(lines) {
@@ -400,14 +422,14 @@ function drawDataTable(dataset) {
   }
   
   // ---------------- Seasonal Data Table (grouped by year) ----------------
-  let seasonalSeries = visibleSeries.filter(name => name.startsWith("Seasonal"));
+  let seasonalSeries = visibleSeries.filter(name => name.startsWith("TMIN") || name.startsWith("TMAX"));
   if (seasonalSeries.length > 0) {
     let seasonalData = {};
     // Process Seasonal TMIN data
     dataset.seasonalTmin.forEach(d => {
       let key = d.year;  // group by year only
       if (!seasonalData[key]) seasonalData[key] = { year: d.year };
-      let seriesName = `Seasonal TMIN ${d.season}`;
+      let seriesName = `TMIN ${d.season}`;
       if (seasonalSeries.includes(seriesName)) {
         seasonalData[key][seriesName] = d.value;
       }
@@ -416,7 +438,7 @@ function drawDataTable(dataset) {
     dataset.seasonalTmax.forEach(d => {
       let key = d.year;  // group by year only
       if (!seasonalData[key]) seasonalData[key] = { year: d.year };
-      let seriesName = `Seasonal TMAX ${d.season}`;
+      let seriesName = `TMAX ${d.season}`;
       if (seasonalSeries.includes(seriesName)) {
         seasonalData[key][seriesName] = d.value;
       }
