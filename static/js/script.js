@@ -277,24 +277,12 @@ function processWeatherData(data) {
 
 /* ------------------ Draw D3 Chart with Legend ------------------ */
 function drawChart(dataset) {
-  // Remove any existing tooltip to avoid duplicates
-  d3.select("body").selectAll(".tooltip").remove();
-  var tooltip = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("position", "absolute")
-    .style("background", "#fff")
-    .style("padding", "5px")
-    .style("border", "1px solid #ccc")
-    .style("border-radius", "3px")
-    .style("pointer-events", "none")
-    .style("opacity", 0);
-
-  // Clear previous chart content
+  // Clear previous chart and legend content
   d3.select("#d3-chart").selectAll("*").remove();
   d3.select("#chart-legend").selectAll("*").remove();
 
   var margin = { top: 20, right: 80, bottom: 50, left: 50 },
-      width = 1200 - margin.left - margin.right,  // Increased width
+      width = 1200 - margin.left - margin.right,
       height = 400 - margin.top - margin.bottom;
 
   var svg = d3.select("#d3-chart").append("svg")
@@ -303,7 +291,7 @@ function drawChart(dataset) {
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-  // Combine all y values from both annual and seasonal data
+  // Combine all y values from annual and seasonal data
   var allData = dataset.annualTmin.concat(dataset.annualTmax, dataset.seasonalTmin, dataset.seasonalTmax);
   var yMin = d3.min(allData, function(d) { return d.value; });
   var yMax = d3.max(allData, function(d) { return d.value; });
@@ -318,7 +306,7 @@ function drawChart(dataset) {
   var x = d3.scaleLinear().domain(xDomain).range([0, width]);
   var y = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
 
-  // Create x-axis with tick values for every year and rotate the labels
+  // Create x-axis with tick values for every year and rotate labels by -70°
   var tickValues = d3.range(minYear, maxYear + 1);
   var xAxisGroup = svg.append("g")
     .attr("class", "axis x-axis")
@@ -338,7 +326,6 @@ function drawChart(dataset) {
     .attr("class", "axis y-axis")
     .call(d3.axisLeft(y));
 
-  // Define the line generator
   var lineGenerator = d3.line()
     .x(function(d) { return x(d.year); })
     .y(function(d) { return y(d.value); });
@@ -355,13 +342,13 @@ function drawChart(dataset) {
     "Winter": { TMIN: "#666666", TMAX: "#CCCCCC" }
   };
 
-  // Build an array of lines to plot
+  // Build array of lines to plot
   var lines = [
     { name: "Annual TMIN", data: dataset.annualTmin, color: annualColors["Annual TMIN"], visible: true },
     { name: "Annual TMAX", data: dataset.annualTmax, color: annualColors["Annual TMAX"], visible: true }
   ];
 
-  // Group seasonal data by season and add to the lines array
+  // Group seasonal data and add to lines array
   var seasonalGroupsTmin = d3.nest()
     .key(function(d) { return d.season; })
     .entries(dataset.seasonalTmin);
@@ -380,9 +367,8 @@ function drawChart(dataset) {
     lines.push({ name: "TMAX " + season, data: group.values, color: color, visible: true });
   });
 
-  // Draw each line and add an invisible overlay for mouse events
+  // Draw each line (all lines are drawn initially)
   lines.forEach(function(lineData) {
-    // Draw the visible line (with pointer events disabled so the overlay handles events)
     lineData.path = svg.append("path")
       .datum(lineData.data)
       .attr("fill", "none")
@@ -390,39 +376,10 @@ function drawChart(dataset) {
       .attr("stroke-width", 2)
       .attr("d", lineGenerator)
       .attr("class", "line")
-      .attr("data-name", lineData.name)
-      .style("pointer-events", "none");
-      
-    // Add an invisible overlay path (using an RGBA transparent color)
-    svg.append("path")
-      .datum(lineData.data)
-      .attr("fill", "none")
-      .attr("stroke", "rgba(0,0,0,0)") // fully transparent but active
-      .attr("stroke-width", 10)         // thicker area for easier hovering
-      .attr("d", lineGenerator)
-      .style("pointer-events", "all")
-      .on("mouseover", function(event) {
-        tooltip.transition().duration(200).style("opacity", 0.9);
-      })
-      .on("mousemove", function(event) {
-        // Get mouse position relative to this overlay path
-        var mousePos = d3.pointer(event, this);
-        var hoveredYear = x.invert(mousePos[0]);
-        // Find the closest data point in this line's dataset
-        var closestPoint = lineData.data.reduce(function(prev, curr) {
-          return (Math.abs(curr.year - hoveredYear) < Math.abs(prev.year - hoveredYear)) ? curr : prev;
-        });
-        tooltip.html("Year: " + closestPoint.year + "<br>" +
-                     lineData.name + ": " + closestPoint.value.toFixed(2) + "°C")
-          .style("left", (event.pageX + 10) + "px")
-          .style("top", (event.pageY - 28) + "px");
-      })
-      .on("mouseout", function() {
-        tooltip.transition().duration(500).style("opacity", 0);
-      });
+      .attr("data-name", lineData.name);
   });
 
-  // Legend with checkboxes (unchanged)
+  // Add the legend with checkboxes to toggle visibility
   var legendContainer = d3.select("#chart-legend");
   legendContainer.html("");
   if (lines && lines.length > 0) {
@@ -444,6 +401,14 @@ function drawChart(dataset) {
         .style("color", lineData.color);
     });
   }
+}
+
+// This function toggles display of each line based on its "visible" flag.
+function updateChartVisibility(lines) {
+  lines.forEach(function(lineData) {
+    d3.select("path[data-name='" + lineData.name + "']")
+      .style("display", lineData.visible ? null : "none");
+  });
 }
 
 /* ------------------ Draw Data Table ------------------ */
