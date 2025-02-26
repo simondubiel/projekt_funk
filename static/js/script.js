@@ -89,11 +89,17 @@ function selectStation(row) {
   // Update the headers with the station name
   let annualHeader = document.querySelector("#annual-data-container .BoxHeading");
   let seasonalHeader = document.querySelector("#seasonal-data-container .BoxHeading");
+  let graphHeader = document.querySelector("#chart-container .BoxHeading");
+
   if (annualHeader) {
     annualHeader.innerText = `${stationName} - Jährliche Durchschnittswerte`;
   }
   if (seasonalHeader) {
     seasonalHeader.innerText = `${stationName} - Saisonale Durchschnittswerte`;
+  }
+
+  if (graphHeader) {
+    graphHeader.innerText = `${stationName} - Wetterdaten`;
   }
 
   let startYear = getInputValue("start-year");

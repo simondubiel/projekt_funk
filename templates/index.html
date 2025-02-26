@@ -25,11 +25,11 @@
         <input type="text" id="station-count-input" class="dropdown-input" value="10" placeholder="Anzahl auswählen">
         <button class="dropdown-btn" data-target="station-count-dropdown">▼</button>
         <ul id="station-count-dropdown" class="dropdown-list">
-          <li onclick="setStationCount(5)">5</li>
+          <li onclick="setStationCount(1)">1</li>
+          <li onclick="setStationCount(2)">2</li>
+          <li onclick="setStationCount(4)">4</li>
+          <li onclick="setStationCount(8)">8</li>
           <li onclick="setStationCount(10)">10</li>
-          <li onclick="setStationCount(15)">15</li>
-          <li onclick="setStationCount(20)">20</li>
-          <li onclick="setStationCount(25)">25</li>
         </ul>
       </div>
     </div>
@@ -93,7 +93,7 @@
 
     <!-- Untere Container -->
     <div id="chart-container" class="less_transparent_container full-width-container">
-      <p class="BoxHeading">Wetterdaten Grafisch</p>
+      <p class="BoxHeading"></p>
       <div id="chart-content">
         <div id="d3-chart"></div>
         <div id="chart-legend"></div>
@@ -101,13 +101,13 @@
     </div>
     <!-- Annual Data Container -->
     <div id="annual-data-container" class="less_transparent_container full-width-container large-table-container">
-      <p class="BoxHeading">Annual Data</p>
+      <p class="BoxHeading">Jährliche Durchschnittswerte</p>
       <div id="annual-data-table"></div>
     </div>
 
     <!-- Seasonal Data Container -->
     <div id="seasonal-data-container" class="less_transparent_container full-width-container large-table-container">
-      <p class="BoxHeading">Seasonal Data</p>
+      <p class="BoxHeading">Saisonale Durchscnittswerte</p>
       <div id="seasonal-data-table"></div>
     </div>
   </div>
