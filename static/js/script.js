@@ -82,7 +82,19 @@ function selectStation(row) {
   let stationId = row.cells[0].innerText;
   let latitude = parseFloat(row.cells[1].innerText);
   let longitude = parseFloat(row.cells[2].innerText);
+  let stationName = row.cells[3].innerText; // Get station name
+
   map.setView([latitude, longitude], 10);
+
+  // Update the headers with the station name
+  let annualHeader = document.querySelector("#annual-data-container .BoxHeading");
+  let seasonalHeader = document.querySelector("#seasonal-data-container .BoxHeading");
+  if (annualHeader) {
+    annualHeader.innerText = `${stationName} - Jährliche Durchschnittswerte`;
+  }
+  if (seasonalHeader) {
+    seasonalHeader.innerText = `${stationName} - Saisonale Durchschnittswerte`;
+  }
 
   let startYear = getInputValue("start-year");
   let endYear = getInputValue("end-year");
@@ -265,76 +277,112 @@ function processWeatherData(data) {
 
 /* ------------------ Draw D3 Chart with Legend ------------------ */
 function drawChart(dataset) {
-  // Vorherige Inhalte löschen
+  // Remove any existing tooltip to avoid duplicates
+  d3.select("body").selectAll(".tooltip").remove();
+  var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("background", "#fff")
+    .style("padding", "5px")
+    .style("border", "1px solid #ccc")
+    .style("border-radius", "3px")
+    .style("pointer-events", "none")
+    .style("opacity", 0);
+
+  // Clear previous chart content
   d3.select("#d3-chart").selectAll("*").remove();
   d3.select("#chart-legend").selectAll("*").remove();
-  
-  let margin = {top: 20, right: 80, bottom: 50, left: 50},
-      width = 800 - margin.left - margin.right,
+
+  var margin = { top: 20, right: 80, bottom: 50, left: 50 },
+      width = 1200 - margin.left - margin.right,  // Increased width
       height = 400 - margin.top - margin.bottom;
-  
-  let svg = d3.select("#d3-chart").append("svg")
+
+  var svg = d3.select("#d3-chart").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-  
-  // Alle Datensätze zusammenfassen
-  let allAnnual = dataset.annualTmin.concat(dataset.annualTmax);
-  
-  // Bestimme den minimalen und maximalen Wert und sorge dafür, dass 0 enthalten ist,
-  // und erweitere den Bereich um 4 Grad an beiden Enden.
-  let yMin = d3.min(allAnnual, d => d.value);
-  let yMax = d3.max(allAnnual, d => d.value);
+
+  // Combine all y values from both annual and seasonal data
+  var allData = dataset.annualTmin.concat(dataset.annualTmax, dataset.seasonalTmin, dataset.seasonalTmax);
+  var yMin = d3.min(allData, function(d) { return d.value; });
+  var yMax = d3.max(allData, function(d) { return d.value; });
   yMin = Math.min(yMin, 0) - 4;
   yMax = Math.max(yMax, 0) + 4;
-  
-  let xExtent = d3.extent(allAnnual, d => d.year+1);
-  let left = xExtent[0] - 1.05;
-  let right = xExtent[1];
-  let xDomain = [left, right];
 
-  let x = d3.scaleLinear().domain(xDomain).range([0, width]);
-  let y = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
-  
-  // x-Achse bei y=0 zeichnen
-  svg.append("g")
+  // Compute x domain based on all years in the dataset
+  var minYear = d3.min(allData, function(d) { return d.year; });
+  var maxYear = d3.max(allData, function(d) { return d.year; });
+  var xDomain = [minYear, maxYear];
+
+  var x = d3.scaleLinear().domain(xDomain).range([0, width]);
+  var y = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
+
+  // Create x-axis with tick values for every year and rotate the labels
+  var tickValues = d3.range(minYear, maxYear + 1);
+  var xAxisGroup = svg.append("g")
     .attr("class", "axis x-axis")
     .attr("transform", "translate(0," + y(0) + ")")
-    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
-  
-  // y-Achse zeichnen
+    .call(d3.axisBottom(x)
+      .tickFormat(d3.format("d"))
+      .tickValues(tickValues)
+    );
+
+  xAxisGroup.selectAll("text")
+    .attr("transform", "rotate(70)")
+    .attr("text-anchor", "start")
+    .style("font-weight", "normal");
+
+  // Create y-axis
   svg.append("g")
     .attr("class", "axis y-axis")
     .call(d3.axisLeft(y));
-  
-  let lineGenerator = d3.line()
-    .x(d => x(d.year))
-    .y(d => y(d.value));
-  
-  // Linien definieren
-  let lines = [
-    {name: "Annual TMIN", data: dataset.annualTmin, color: "blue", visible: true},
-    {name: "Annual TMAX", data: dataset.annualTmax, color: "red", visible: true}
+
+  // Define the line generator
+  var lineGenerator = d3.line()
+    .x(function(d) { return x(d.year); })
+    .y(function(d) { return y(d.value); });
+
+  // Define color mappings
+  var annualColors = {
+    "Annual TMIN": "#6699FF",
+    "Annual TMAX": "#CC0000"
+  };
+  var seasonColors = {
+    "Spring": { TMIN: "#339900", TMAX: "#00CC00" },
+    "Summer": { TMIN: "#FF6633", TMAX: "#FF3300" },
+    "Autumn": { TMIN: "#663300", TMAX: "#CC6633" },
+    "Winter": { TMIN: "#666666", TMAX: "#CCCCCC" }
+  };
+
+  // Build an array of lines to plot
+  var lines = [
+    { name: "Annual TMIN", data: dataset.annualTmin, color: annualColors["Annual TMIN"], visible: true },
+    { name: "Annual TMAX", data: dataset.annualTmax, color: annualColors["Annual TMAX"], visible: true }
   ];
-  
-  // Saisonale Daten gruppieren
-  let seasonalGroupsTmin = d3.nest()
-    .key(d => d.season)
+
+  // Group seasonal data by season and add to the lines array
+  var seasonalGroupsTmin = d3.nest()
+    .key(function(d) { return d.season; })
     .entries(dataset.seasonalTmin);
-  let seasonalGroupsTmax = d3.nest()
-    .key(d => d.season)
+  var seasonalGroupsTmax = d3.nest()
+    .key(function(d) { return d.season; })
     .entries(dataset.seasonalTmax);
-  
-  seasonalGroupsTmin.forEach(group => {
-    lines.push({name: `TMIN ${group.key}`, data: group.values, color: "lightblue", visible: true});
+
+  seasonalGroupsTmin.forEach(function(group) {
+    var season = group.key;
+    var color = seasonColors[season] ? seasonColors[season].TMIN : "black";
+    lines.push({ name: "TMIN " + season, data: group.values, color: color, visible: true });
   });
-  seasonalGroupsTmax.forEach(group => {
-    lines.push({name: `TMAX ${group.key}`, data: group.values, color: "pink", visible: true});
+  seasonalGroupsTmax.forEach(function(group) {
+    var season = group.key;
+    var color = seasonColors[season] ? seasonColors[season].TMAX : "black";
+    lines.push({ name: "TMAX " + season, data: group.values, color: color, visible: true });
   });
-  
-  // Linien zeichnen
-  lines.forEach(lineData => {
+
+  // Draw each line and add an invisible overlay for mouse events
+  lines.forEach(function(lineData) {
+    // Draw the visible line (with pointer events disabled so the overlay handles events)
     lineData.path = svg.append("path")
       .datum(lineData.data)
       .attr("fill", "none")
@@ -342,43 +390,65 @@ function drawChart(dataset) {
       .attr("stroke-width", 2)
       .attr("d", lineGenerator)
       .attr("class", "line")
-      .attr("data-name", lineData.name);
-  });
-  
-  // Legende mit Checkboxes
-  let legendContainer = d3.select("#chart-legend");
-legendContainer.html(""); // Clear previous content
-
-if (lines && lines.length > 0) {
-  let legend = legendContainer.append("div");
-  lines.forEach(lineData => {
-    let legendItem = legend.append("div");
-    legendItem.append("input")
-      .attr("type", "checkbox")
-      .attr("checked", true)
-      .attr("id", lineData.name)
-      .on("change", function() {
-        lineData.visible = this.checked;
-        updateChartVisibility(lines);
-        drawDataTable(window.currentWeatherDataset);
+      .attr("data-name", lineData.name)
+      .style("pointer-events", "none");
+      
+    // Add an invisible overlay path (using an RGBA transparent color)
+    svg.append("path")
+      .datum(lineData.data)
+      .attr("fill", "none")
+      .attr("stroke", "rgba(0,0,0,0)") // fully transparent but active
+      .attr("stroke-width", 10)         // thicker area for easier hovering
+      .attr("d", lineGenerator)
+      .style("pointer-events", "all")
+      .on("mouseover", function(event) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+      })
+      .on("mousemove", function(event) {
+        // Get mouse position relative to this overlay path
+        var mousePos = d3.pointer(event, this);
+        var hoveredYear = x.invert(mousePos[0]);
+        // Find the closest data point in this line's dataset
+        var closestPoint = lineData.data.reduce(function(prev, curr) {
+          return (Math.abs(curr.year - hoveredYear) < Math.abs(prev.year - hoveredYear)) ? curr : prev;
+        });
+        tooltip.html("Year: " + closestPoint.year + "<br>" +
+                     lineData.name + ": " + closestPoint.value.toFixed(2) + "°C")
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        tooltip.transition().duration(500).style("opacity", 0);
       });
-    legendItem.append("label")
-      .attr("for", lineData.name)
-      .text(lineData.name)
-      .style("color", lineData.color);
   });
-}
-}
 
-function updateChartVisibility(lines) {
-  lines.forEach(lineData => {
-    d3.select(`path[data-name='${lineData.name}']`)
-      .style("display", lineData.visible ? null : "none");
-  });
+  // Legend with checkboxes (unchanged)
+  var legendContainer = d3.select("#chart-legend");
+  legendContainer.html("");
+  if (lines && lines.length > 0) {
+    var legend = legendContainer.append("div");
+    lines.forEach(function(lineData) {
+      var legendItem = legend.append("div");
+      legendItem.append("input")
+        .attr("type", "checkbox")
+        .attr("checked", true)
+        .attr("id", lineData.name)
+        .on("change", function() {
+          lineData.visible = this.checked;
+          updateChartVisibility(lines);
+          drawDataTable(window.currentWeatherDataset);
+        });
+      legendItem.append("label")
+        .attr("for", lineData.name)
+        .text(lineData.name)
+        .style("color", lineData.color);
+    });
+  }
 }
 
 /* ------------------ Draw Data Table ------------------ */
 function drawDataTable(dataset) {
+  // Determine which series are visible
   let visibleSeries = [];
   d3.selectAll("#chart-legend input").each(function() {
     if (this.checked) {
@@ -386,8 +456,11 @@ function drawDataTable(dataset) {
     }
   });
   
-  let tableContainer = document.getElementById("d3-data-table");
-  tableContainer.innerHTML = "";
+  // Get the two containers by their new IDs
+  let annualTableContainer = document.getElementById("annual-data-table");
+  let seasonalTableContainer = document.getElementById("seasonal-data-table");
+  annualTableContainer.innerHTML = "";
+  seasonalTableContainer.innerHTML = "";
   
   // ---------------- Annual Data Table ----------------
   let annualSeries = visibleSeries.filter(name => name.startsWith("Annual"));
@@ -405,20 +478,20 @@ function drawDataTable(dataset) {
         annualData[d.year]["Annual TMAX"] = d.value;
       });
     }
-    let tableHTML = "<h4>Annual Data</h4><table border='1'><thead><tr><th>Year</th>";
+    let annualTableHTML = "<table border='1'><thead><tr><th>Year</th>";
     annualSeries.forEach(series => {
-      tableHTML += `<th>${series}</th>`;
+      annualTableHTML += `<th>${series}</th>`;
     });
-    tableHTML += "</tr></thead><tbody>";
+    annualTableHTML += "</tr></thead><tbody>";
     Object.keys(annualData).sort().forEach(year => {
-      tableHTML += `<tr><td>${year}</td>`;
+      annualTableHTML += `<tr><td>${year}</td>`;
       annualSeries.forEach(series => {
-        tableHTML += `<td>${annualData[year][series] ? annualData[year][series].toFixed(2) : ""}</td>`;
+        annualTableHTML += `<td>${annualData[year][series] ? annualData[year][series].toFixed(2) : ""}</td>`;
       });
-      tableHTML += "</tr>";
+      annualTableHTML += "</tr>";
     });
-    tableHTML += "</tbody></table>";
-    tableContainer.innerHTML += tableHTML;
+    annualTableHTML += "</tbody></table>";
+    annualTableContainer.innerHTML = annualTableHTML;
   }
   
   // ---------------- Seasonal Data Table (grouped by year) ----------------
@@ -427,7 +500,7 @@ function drawDataTable(dataset) {
     let seasonalData = {};
     // Process Seasonal TMIN data
     dataset.seasonalTmin.forEach(d => {
-      let key = d.year;  // group by year only
+      let key = d.year;  // Group by year
       if (!seasonalData[key]) seasonalData[key] = { year: d.year };
       let seriesName = `TMIN ${d.season}`;
       if (seasonalSeries.includes(seriesName)) {
@@ -436,7 +509,7 @@ function drawDataTable(dataset) {
     });
     // Process Seasonal TMAX data
     dataset.seasonalTmax.forEach(d => {
-      let key = d.year;  // group by year only
+      let key = d.year;  // Group by year
       if (!seasonalData[key]) seasonalData[key] = { year: d.year };
       let seriesName = `TMAX ${d.season}`;
       if (seasonalSeries.includes(seriesName)) {
@@ -444,21 +517,21 @@ function drawDataTable(dataset) {
       }
     });
     
-    let tableHTML = "<h4>Seasonal Data</h4><table border='1'><thead><tr><th>Year</th>";
+    let seasonalTableHTML = "<table border='1'><thead><tr><th>Year</th>";
     seasonalSeries.forEach(series => {
-      tableHTML += `<th>${series}</th>`;
+      seasonalTableHTML += `<th>${series}</th>`;
     });
-    tableHTML += "</tr></thead><tbody>";
+    seasonalTableHTML += "</tr></thead><tbody>";
     Object.keys(seasonalData).sort().forEach(year => {
       let row = seasonalData[year];
-      tableHTML += `<tr><td>${row.year}</td>`;
+      seasonalTableHTML += `<tr><td>${row.year}</td>`;
       seasonalSeries.forEach(series => {
-        tableHTML += `<td>${row[series] !== undefined ? row[series].toFixed(2) : ""}</td>`;
+        seasonalTableHTML += `<td>${row[series] !== undefined ? row[series].toFixed(2) : ""}</td>`;
       });
-      tableHTML += "</tr>";
+      seasonalTableHTML += "</tr>";
     });
-    tableHTML += "</tbody></table>";
-    tableContainer.innerHTML += tableHTML;
+    seasonalTableHTML += "</tbody></table>";
+    seasonalTableContainer.innerHTML = seasonalTableHTML;
   }
 }
 
