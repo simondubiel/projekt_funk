@@ -305,9 +305,9 @@ tbody tr.selected {
 #chart-content {
   display: flex;
   flex-wrap: wrap;
-  flex-direction: row; /* Aligns items horizontally */
-  align-items: flex-start; /* Aligns both items at the top */
-  gap: 20px; /* Space between chart and legend */
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 #d3-chart {
@@ -331,47 +331,52 @@ tbody tr.selected {
   font-size: 14px;        /* Schriftgröße der Tick-Beschriftungen */
 }
 
+#chart-legend:empty {
+  display: none;
+}
+
 #chart-legend {
-  border: 1px solid gray;  /* Border around legend */
-  border-radius: 5px;     /* Rounded corners */
-  padding: 10px;        /* Padding inside legend */
-  width: 200px;  /* Adjust width as needed */
-  margin-left: 20px; /* Space between chart and legend */
+  border: 1px solid gray;
+  border-radius: 5px;
+  padding: 10px;
+  width: 200px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  align-items: left; /* Aligns items to the left */
-  display: inline-block;
-  flex-direction: column; /* Aligns items vertically */
-  gap: 5px; /* Space between legend items */
+  display: flex; 
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: center;
+  gap: 5px;
   white-space: nowrap;
   min-width: 100px;
- }
+}
 
 /* Make the SVG itself scale within its container */
 .svg-content-responsive {
   width: 100%;
-  height: auto;        /* Keep aspect ratio */
+  height: auto;
   display: block;
 }
 
+/* Legend item container */
 .legend-item {
-  display: block;
-  white-space: nowrap; 
-  flex-direction: row;
-  align-items: flex-start;  
-  justify-content: flex-start;
+  display: flex;
+  align-items: center;   /* vertically center dot and text */
+  cursor: pointer;
   margin-bottom: 5px;
-}
-
-.legend-item input[type:"checkbox"] {
-  align-self: flex-start;
-  vertical-align: middle;
-  margin-top: 0; 
-  margin-right: 5px;
-}
-
-.legend-item label {
-  /* Optionally force inline-block so vertical-align applies */
-  display: inline-block;
-  vertical-align: top; 
   white-space: nowrap;
+}
+
+/* The colored dot */
+.legend-dot {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* The legend text */
+.legend-text {
+  margin-left: 15px;  /* 15px gap after the dot */
+  vertical-align: middle;
 }

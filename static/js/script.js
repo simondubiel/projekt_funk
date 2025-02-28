@@ -32,11 +32,10 @@ function updateMapMarker() {
     marker = L.marker([latitude, longitude]).addTo(map);
   }
   map.setView([latitude, longitude], 10);
-  //Ergänzung zur Bestimmung der Halbkugel
+  // Ergänzung zur Bestimmung der Halbkugel
   if (latitude >= 0) {
     latitude_positive = true;
-  }
-  else {
+  } else {
     latitude_positive = false;
   }
 }
@@ -97,7 +96,6 @@ function selectStation(row) {
   if (seasonalHeader) {
     seasonalHeader.innerText = `${stationName} - Saisonale Durchschnittswerte`;
   }
-
   if (graphHeader) {
     graphHeader.innerText = `${stationName} - Wetterdaten`;
   }
@@ -116,11 +114,6 @@ function toggleDropdown(event) {
     document.querySelectorAll(".dropdown-list").forEach(el => el.style.display = "none");
     dropdown.style.display = isVisible ? "none" : "block";
   }
-}
-
-function setDropdownValue(value, inputId, dropdownId) {
-  document.getElementById(inputId).value = value;
-  document.getElementById(dropdownId).style.display = "none";
 }
 
 /* ------------------ Fetch Stations based on Criteria ------------------ */
@@ -230,8 +223,7 @@ function processWeatherData(data) {
       else if (month >= 3 && month <= 5) return "Spring";
       else if (month >= 6 && month <= 8) return "Summer";
       else if (month >= 9 && month <= 11) return "Autumn";
-    }
-    else {
+    } else {
       if (month === 12 || month === 1 || month === 2) return "Summer";
       else if (month >= 3 && month <= 5) return "Autumn";
       else if (month >= 6 && month <= 8) return "Winter";
@@ -277,8 +269,8 @@ function processWeatherData(data) {
   };
   // Global speichern, damit Filter auch die Tabelle aktualisieren
   window.currentWeatherDataset = processedData;
+  // Call drawChart; drawDataTable will be called from drawChart after setting window.currentLines
   drawChart(processedData);
-  drawDataTable(processedData);
 }
 
 /* ------------------ Draw D3 Chart with Legend ------------------ */
@@ -314,23 +306,70 @@ function drawChart(dataset) {
 
   // Create x-axis with tick values for every year and rotate labels by -70°
   var tickValues = d3.range(minYear, maxYear + 1);
+  var totalTicks = tickValues.length;
+
+  if (totalTicks > 100) {
+    tickValues = tickValues.filter((d, i) => i % 20 === 0);
+  } else if (totalTicks > 60) {
+    tickValues = tickValues.filter((d, i) => i % 10 === 0);
+  } else if (totalTicks > 40) {
+    tickValues = tickValues.filter((d, i) => i % 5 === 0);
+  } else if (totalTicks > 30) {
+    tickValues = tickValues.filter((d, i) => i % 3 === 0);
+  } 
+
+  var xAxis = d3.axisBottom(x)
+    .tickFormat(d3.format("d"))
+    .tickValues(tickValues)
+    .tickSizeInner(0)
+    .tickSizeOuter(0);
+
   var xAxisGroup = svg.append("g")
-    .attr("class", "axis x-axis")
-    .attr("transform", "translate(0," + y(0) + ")")
-    .call(d3.axisBottom(x)
-      .tickFormat(d3.format("d"))
-      .tickValues(tickValues)
-    );
+      .attr("class", "axis x-axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
 
   xAxisGroup.selectAll("text")
-    .attr("transform", "rotate(70)")
-    .attr("text-anchor", "start")
-    .style("font-weight", "normal");
+      .attr("dy", "1em")
+      .attr("transform", function() {
+        return "translate(15,15) rotate(70)";
+      })
+      .style("text-anchor", "middle");
+    
+  // Create a grid axis based on the y scale
+  var yGrid = d3.axisLeft(y)
+    .tickSize(-width)
+    .tickFormat("")
+    .ticks(10);
 
-  // Create y-axis
+  var gridGroup = svg.append("g")
+    .attr("class", "grid")
+    .call(yGrid)
+    .selectAll("line")
+    .attr("stroke", "#ddd")
+    .attr("stroke-dasharray", "2,2");
+
+  svg.select(".grid").selectAll("line")
+    .filter(function() {
+      // The bottom grid line should have a y-coordinate equal to the chart height.
+      return +d3.select(this).attr("y1") === height;
+    })
+    .remove();
+
+  svg.select(".grid").select(".domain").remove();
+
+  svg.append("line")
+    .attr("x1", 0)
+    .attr("x2", width)
+    .attr("y1", y(0))
+    .attr("y2", y(0))
+    .attr("stroke", "black")
+    .attr("stroke-width", 1);
+
+  // Create y-axis without tick marks on the left side
   svg.append("g")
     .attr("class", "axis y-axis")
-    .call(d3.axisLeft(y));
+    .call(d3.axisLeft(y).tickSize(0));
 
   var lineGenerator = d3.line()
     .x(function(d) { return x(d.year); })
@@ -344,7 +383,7 @@ function drawChart(dataset) {
   var seasonColors = {
     "Spring": { TMIN: "#339900", TMAX: "#00CC00" },
     "Summer": { TMIN: "#FF6633", TMAX: "#FF3300" },
-    "Autumn": { TMIN: "#663300", TMAX: "#CC6633" },
+    "Autumn": { TMIN: "#993300", TMAX: "#CC6633" },
     "Winter": { TMIN: "#666666", TMAX: "#CCCCCC" }
   };
 
@@ -385,28 +424,50 @@ function drawChart(dataset) {
       .attr("data-name", lineData.name);
   });
 
-  // Add the legend with checkboxes to toggle visibility
+  // Store lines globally so that data table and legend events can access them
+  window.currentLines = lines;
+
+  // Add the legend with clickable dot and text
   var legendContainer = d3.select("#chart-legend");
-  legendContainer.html("");
+  legendContainer.html("");  // Clear previous legend content
   if (lines && lines.length > 0) {
     var legend = legendContainer.append("div");
     lines.forEach(function(lineData) {
-      var legendItem = legend.append("div");
-      legendItem.append("input")
-        .attr("type", "checkbox")
-        .attr("checked", true)
-        .attr("id", lineData.name)
-        .on("change", function() {
-          lineData.visible = this.checked;
-          updateChartVisibility(lines);
-          drawDataTable(window.currentWeatherDataset);
+      var legendItem = legend.append("div")
+        .attr("class", "legend-item")
+        .on("click", function() {
+          // Toggle visibility
+          lineData.visible = !lineData.visible;
+          updateChartVisibility(window.currentLines);
+          drawDataTable(window.currentWeatherDataset, window.currentLines);
+          // Update styles based on visibility
+          d3.select(this).select(".legend-dot")
+            .style("background-color", lineData.visible ? lineData.color : "gray");
+          d3.select(this).select(".legend-text")
+            .style("color", lineData.visible ? lineData.color : "gray")
+            .style("text-decoration", lineData.visible ? "none" : "line-through");
         });
-      legendItem.append("label")
-        .attr("for", lineData.name)
+      
+      // Create the colored dot
+      legendItem.append("span")
+        .attr("class", "legend-dot")
+        .style("display", "inline-block")
+        .style("width", "16px")
+        .style("height", "16px")
+        .style("border-radius", "50%")
+        .style("background-color", lineData.color);
+      
+      // Create the text for the legend item
+      legendItem.append("span")
+        .attr("class", "legend-text")
+        .style("margin-left", "15px")
         .text(lineData.name)
         .style("color", lineData.color);
     });
   }
+  
+  // After drawing the chart, update the data tables using the global lines
+  drawDataTable(window.currentWeatherDataset, window.currentLines);
 }
 
 // This function toggles display of each line based on its "visible" flag.
@@ -418,14 +479,9 @@ function updateChartVisibility(lines) {
 }
 
 /* ------------------ Draw Data Table ------------------ */
-function drawDataTable(dataset) {
+function drawDataTable(dataset, lines) {
   // Determine which series are visible
-  let visibleSeries = [];
-  d3.selectAll("#chart-legend input").each(function() {
-    if (this.checked) {
-      visibleSeries.push(this.id);
-    }
-  });
+  let visibleSeries = lines.filter(line => line.visible).map(line => line.name);
   
   // Get the two containers by their new IDs
   let annualTableContainer = document.getElementById("annual-data-table");
@@ -522,11 +578,6 @@ function saveSearchCriteria() {
     "longitude": getInputValue("longitude")
   };
   console.log("Gespeicherte Suchkriterien:", JSON.stringify(searchCriteria, null, 2));
-}
-
-/* ------------------ Input Validation ------------------ */
-function validateNumericInput(input) {
-  input.value = input.value.replace(/[^0-9.]/g, '');
 }
 
 /* ------------------ Event Listeners ------------------ */
