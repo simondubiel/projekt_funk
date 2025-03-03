@@ -489,7 +489,7 @@ function drawChart(dataset) {
   
   // After drawing the chart, update the data tables using the global lines
   drawDataTable(window.currentWeatherDataset, window.currentLines);
-}
+
 
 // This function toggles display of each line based on its "visible" flag.
 function updateChartVisibility(lines) {
@@ -499,6 +499,116 @@ function updateChartVisibility(lines) {
   });
 }
 
+  // ***************** Interactive Hover Implementation *****************
+
+  // Append a focus group to hold a vertical line and one circle per visible line
+  var focus = svg.append("g")
+      .attr("class", "focus")
+      .style("display", "none");
+
+  // Append a vertical focus line
+  focus.append("line")
+      .attr("class", "focus-line")
+      .attr("stroke", "gray")
+      .attr("stroke-width", 1)
+      .attr("stroke-dasharray", "3,3")
+      .attr("y1", 0)
+      .attr("y2", height);
+
+  // For each line in window.currentLines, add a focus circle (initially hidden)
+  window.currentLines.forEach(function(lineData, i) {
+    focus.append("circle")
+        .attr("class", "focus-circle")
+        .attr("id", "focus-circle-" + i)
+        .attr("r", 4)
+        .attr("fill", lineData.color);
+  });
+
+  // Create a tooltip div (if not already created)
+  var tooltip = d3.select("body").select(".tooltip");
+  if (tooltip.empty()) {
+    tooltip = d3.select("body").append("div")
+      .attr("class", "tooltip")
+      .style("position", "absolute")
+      .style("background", "#fff")
+      .style("padding", "5px")
+      .style("border", "1px solid #ccc")
+      .style("border-radius", "5px")
+      .style("pointer-events", "none")
+      .style("display", "none");
+  }
+
+  // Append an overlay rectangle to capture mouse events
+  svg.append("rect")
+      .attr("class", "overlay")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("fill", "none")
+      .attr("pointer-events", "all")
+      .on("mouseover", function() {
+          focus.style("display", null);
+          tooltip.style("display", null);
+      })
+      .on("mouseout", function() {
+          focus.style("display", "none");
+          tooltip.style("display", "none");
+      })
+      .on("mousemove", mousemove);
+
+  // Use a bisector to find the nearest data point by year
+  var bisectYear = d3.bisector(function(d) { return d.year; }).left;
+
+  function mousemove() {
+    var mouse = d3.mouse(this);
+    var mouseX = mouse[0];
+    // Invert the x scale to get the corresponding year (could be fractional)
+    var yearAtMouse = x.invert(mouseX);
+
+    // Update the vertical focus line position
+    focus.select(".focus-line")
+         .attr("x1", mouseX)
+         .attr("x2", mouseX);
+
+    // Build tooltip content
+    var tooltipContent = "<strong>Year:</strong> " + Math.round(yearAtMouse);
+
+    // For each visible line, find the nearest point and update its focus circle
+    window.currentLines.forEach(function(lineData, i) {
+        if (!lineData.visible) {
+            d3.select("#focus-circle-" + i).style("display", "none");
+            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
+            return;
+        }
+        var data = lineData.filledData;
+        var idx = bisectYear(data, yearAtMouse);
+        var d0 = data[idx - 1];
+        var d1 = data[idx];
+        var dClosest;
+        if (!d0) {
+            dClosest = d1;
+        } else if (!d1) {
+            dClosest = d0;
+        } else {
+            dClosest = (yearAtMouse - d0.year) > (d1.year - yearAtMouse) ? d1 : d0;
+        }
+        if (dClosest && dClosest.value != null) {
+            d3.select("#focus-circle-" + i)
+              .style("display", null)
+              .attr("cx", x(dClosest.year))
+              .attr("cy", y(dClosest.value));
+            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(2);
+        } else {
+            d3.select("#focus-circle-" + i).style("display", "none");
+            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
+        }
+    });
+
+    // Position and update tooltip
+    tooltip.html(tooltipContent)
+           .style("left", (d3.event.pageX + 10) + "px")
+           .style("top", (d3.event.pageY - 28) + "px");
+}
+}
 /* ------------------ Draw Data Table ------------------ */
 function drawDataTable(dataset, lines) {
   // Determine which series are visible
