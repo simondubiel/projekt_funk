@@ -273,6 +273,23 @@ function processWeatherData(data) {
   drawChart(processedData);
 }
 
+/* ------------------ Helper: Fill Missing Years ------------------ */
+// This function returns an array for every year in [minYear, maxYear].
+// If a year is missing in the input data, it inserts an object with value null.
+function fillMissingYears(data, minYear, maxYear) {
+  let dataMap = new Map();
+  data.forEach(d => dataMap.set(d.year, d.value));
+  let filled = [];
+  for (let year = minYear; year <= maxYear; year++) {
+    if (dataMap.has(year)) {
+      filled.push({ year: year, value: dataMap.get(year) });
+    } else {
+      filled.push({ year: year, value: null });
+    }
+  }
+  return filled;
+}
+
 /* ------------------ Draw D3 Chart with Legend ------------------ */
 function drawChart(dataset) {
   // Clear previous chart and legend content
@@ -371,7 +388,9 @@ function drawChart(dataset) {
     .attr("class", "axis y-axis")
     .call(d3.axisLeft(y).tickSize(0));
 
+  // Define the line generator with a defined accessor.
   var lineGenerator = d3.line()
+    .defined(function(d) { return d.value != null; })
     .x(function(d) { return x(d.year); })
     .y(function(d) { return y(d.value); });
 
@@ -390,7 +409,7 @@ function drawChart(dataset) {
   // Build array of lines to plot
   var lines = [
     { name: "Annual TMIN", data: dataset.annualTmin, color: annualColors["Annual TMIN"], visible: true },
-    { name: "Annual TMAX", data: dataset.annualTmax, color: annualColors["Annual TMAX"], visible: true }
+    { name: "Annual TMAX", data: dataset.annualTMAX || dataset.annualTmax, color: annualColors["Annual TMAX"], visible: true }
   ];
 
   // Group seasonal data and add to lines array
@@ -412,10 +431,12 @@ function drawChart(dataset) {
     lines.push({ name: "TMAX " + season, data: group.values, color: color, visible: true });
   });
 
-  // Draw each line (all lines are drawn initially)
+  // For each line, fill missing years so that gaps appear if data is missing.
   lines.forEach(function(lineData) {
+    // Replace the raw data with a complete series including nulls for missing years.
+    lineData.filledData = fillMissingYears(lineData.data, minYear, maxYear);
     lineData.path = svg.append("path")
-      .datum(lineData.data)
+      .datum(lineData.filledData)
       .attr("fill", "none")
       .attr("stroke", lineData.color)
       .attr("stroke-width", 2)
