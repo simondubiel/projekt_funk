@@ -17,10 +17,10 @@ var stationMarkers = [];
 
 // Allow selecting coordinates by clicking on the map when the inputs are empty.
 map.on('click', function(e) {
-  // Get the station table body element
   let tableBody = document.getElementById("station-table");
-  // Check if the table body has no rows (i.e. it's empty)
-  if (!tableBody || tableBody.childElementCount === 0) {
+  // Allow selecting new coordinates if there are no data rows,
+  // i.e. if the table is empty or contains only the "Keine Stationen verfügbar" row.
+  if (!tableBody || tableBody.childElementCount === 0 || (tableBody.childElementCount === 1 && tableBody.innerText.trim().includes("Keine Stationen verfügbar"))) {
     let lat = e.latlng.lat;
     let lon = e.latlng.lng;
     document.getElementById("latitude").value = lat.toFixed(5);

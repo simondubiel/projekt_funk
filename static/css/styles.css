@@ -304,19 +304,18 @@ tbody tr.selected {
 
 #chart-content {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   flex-direction: row;
   align-items: flex-start;
-  gap: 20px;
+  gap: 10px;
+  overflow-x: auto;
 }
 
 #d3-chart {
-  width: 100%;
+  min-width: 300px; 
   height: auto;
-  overflow: visible; /* oder overflow: auto, falls du Scrollen möchtest */
-  margin-right: 20px; /* Space between chart and legend */
-  flex: 1; /* Takes up remaining space */
-  min-width: 300px;
+  overflow: auto; 
+  flex: 0 0 auto;
 }
 
 /* Achsen-Styling: Linien und Texte */
@@ -339,15 +338,16 @@ tbody tr.selected {
   border: 1px solid gray;
   border-radius: 5px;
   padding: 10px;
-  width: 200px;
+  width: auto;
+  min-width: 200px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex; 
   flex-direction: column;
   align-items: flex-start;
-  align-self: center;
   gap: 5px;
   white-space: nowrap;
   min-width: 100px;
+  flex-shrink: 0;
 }
 
 /* Make the SVG itself scale within its container */
