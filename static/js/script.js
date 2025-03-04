@@ -15,11 +15,8 @@ var marker;
 var radiusCircle;
 var stationMarkers = [];
 
-// Allow selecting coordinates by clicking on the map when the inputs are empty.
 map.on('click', function(e) {
   let tableBody = document.getElementById("station-table");
-  // Allow selecting new coordinates if there are no data rows,
-  // i.e. if the table is empty or contains only the "Keine Stationen verfügbar" row.
   if (!tableBody || tableBody.childElementCount === 0 || (tableBody.childElementCount === 1 && tableBody.innerText.trim().includes("Keine Stationen verfügbar"))) {
     let lat = e.latlng.lat;
     let lon = e.latlng.lng;
@@ -360,9 +357,7 @@ function drawChart(dataset) {
   d3.select("#d3-chart").selectAll("*").remove();
   d3.select("#chart-legend").selectAll("*").remove();
 
-  var margin = { top: 20, right: 80, bottom: 50, left: 50 },
-      width = 1200 - margin.left - margin.right,
-      height = 400 - margin.top - margin.bottom;
+  var margin = { top: 20, right: 80, bottom: 50, left: 50 }, width = 1200 - margin.left - margin.right, height = 400 - margin.top - margin.bottom;
 
   var svg = d3.select("#d3-chart").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -406,16 +401,16 @@ function drawChart(dataset) {
     .tickSizeOuter(0);
 
   var xAxisGroup = svg.append("g")
-      .attr("class", "axis x-axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis);
+    .attr("class", "axis x-axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
 
   xAxisGroup.selectAll("text")
-      .attr("dy", "1em")
-      .attr("transform", function() {
-        return "translate(15,15) rotate(70)";
-      })
-      .style("text-anchor", "middle");
+    .attr("dy", "1em")
+    .attr("transform", function() {
+      return "translate(15,15) rotate(70)";
+    })
+    .style("text-anchor", "middle");
     
   // Create a grid axis based on the y scale
   var yGrid = d3.axisLeft(y)
@@ -567,25 +562,25 @@ function updateChartVisibility(lines) {
 
   // Append a focus group to hold a vertical line and one circle per visible line
   var focus = svg.append("g")
-      .attr("class", "focus")
-      .style("display", "none");
+    .attr("class", "focus")
+    .style("display", "none");
 
   // Append a vertical focus line
   focus.append("line")
-      .attr("class", "focus-line")
-      .attr("stroke", "gray")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "3,3")
-      .attr("y1", 0)
-      .attr("y2", height);
+    .attr("class", "focus-line")
+    .attr("stroke", "gray")
+    .attr("stroke-width", 1)
+    .attr("stroke-dasharray", "3,3")
+    .attr("y1", 0)
+    .attr("y2", height);
 
   // For each line in window.currentLines, add a focus circle (initially hidden)
   window.currentLines.forEach(function(lineData, i) {
     focus.append("circle")
-        .attr("class", "focus-circle")
-        .attr("id", "focus-circle-" + i)
-        .attr("r", 4)
-        .attr("fill", lineData.color);
+      .attr("class", "focus-circle")
+      .attr("id", "focus-circle-" + i)
+      .attr("r", 4)
+      .attr("fill", lineData.color);
   });
 
   // Create a tooltip div (if not already created)
@@ -604,20 +599,20 @@ function updateChartVisibility(lines) {
 
   // Append an overlay rectangle to capture mouse events
   svg.append("rect")
-      .attr("class", "overlay")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("fill", "none")
-      .attr("pointer-events", "all")
-      .on("mouseover", function() {
-          focus.style("display", null);
-          tooltip.style("display", null);
-      })
-      .on("mouseout", function() {
-          focus.style("display", "none");
-          tooltip.style("display", "none");
-      })
-      .on("mousemove", mousemove);
+    .attr("class", "overlay")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("fill", "none")
+    .attr("pointer-events", "all")
+    .on("mouseover", function() {
+      focus.style("display", null);
+      tooltip.style("display", null);
+    })
+    .on("mouseout", function() {
+      focus.style("display", "none");
+      tooltip.style("display", "none");
+    })
+    .on("mousemove", mousemove);
 
   // Use a bisector to find the nearest data point by year
   var bisectYear = d3.bisector(function(d) { return d.year; }).left;
@@ -630,47 +625,47 @@ function updateChartVisibility(lines) {
 
     // Update the vertical focus line position
     focus.select(".focus-line")
-         .attr("x1", mouseX)
-         .attr("x2", mouseX);
+      .attr("x1", mouseX)
+      .attr("x2", mouseX);
 
     // Build tooltip content
     var tooltipContent = "<strong>Year:</strong> " + Math.round(yearAtMouse);
 
     // For each visible line, find the nearest point and update its focus circle
     window.currentLines.forEach(function(lineData, i) {
-        if (!lineData.visible) {
-            d3.select("#focus-circle-" + i).style("display", "none");
-            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
-            return;
-        }
-        var data = lineData.filledData;
-        var idx = bisectYear(data, yearAtMouse);
-        var d0 = data[idx - 1];
-        var d1 = data[idx];
-        var dClosest;
-        if (!d0) {
-            dClosest = d1;
-        } else if (!d1) {
-            dClosest = d0;
-        } else {
-            dClosest = (yearAtMouse - d0.year) > (d1.year - yearAtMouse) ? d1 : d0;
-        }
-        if (dClosest && dClosest.value != null) {
-            d3.select("#focus-circle-" + i)
-              .style("display", null)
-              .attr("cx", x(dClosest.year))
-              .attr("cy", y(dClosest.value));
-            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(2);
-        } else {
-            d3.select("#focus-circle-" + i).style("display", "none");
-            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
-        }
+      if (!lineData.visible) {
+        d3.select("#focus-circle-" + i).style("display", "none");
+        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
+        return;
+      }
+      var data = lineData.filledData;
+      var idx = bisectYear(data, yearAtMouse);
+      var d0 = data[idx - 1];
+      var d1 = data[idx];
+      var dClosest;
+      if (!d0) {
+        dClosest = d1;
+      } else if (!d1) {
+          dClosest = d0;
+      } else {
+          dClosest = (yearAtMouse - d0.year) > (d1.year - yearAtMouse) ? d1 : d0;
+      }
+      if (dClosest && dClosest.value != null) {
+        d3.select("#focus-circle-" + i)
+          .style("display", null)
+          .attr("cx", x(dClosest.year))
+          .attr("cy", y(dClosest.value));
+        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(2);
+      } else {
+          d3.select("#focus-circle-" + i).style("display", "none");
+          tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
+      }
     });
 
     // Position and update tooltip
     tooltip.html(tooltipContent)
-           .style("left", (d3.event.pageX + 10) + "px")
-           .style("top", (d3.event.pageY - 28) + "px");
+      .style("left", (d3.event.pageX + 10) + "px")
+      .style("top", (d3.event.pageY - 28) + "px");
 }
 }
 /* ------------------ Draw Data Table ------------------ */

@@ -2,59 +2,72 @@ name: Python Tests & Code Quality
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.13"
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.13"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 black pytest pytest-cov requests pandas flask flask-cors
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black pytest pytest-cov requests pandas flask flask-cors flask-caching
 
-    - name: Lint mit flake8 (Syntaxprüfung)
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Code automatisch mit Black formatieren
-      run: |
-        black .
+      - name: Format code with Black
+        run: |
+          black .
 
-    - name: Starte Flask-Server im Hintergrund
-      run: |
-        python app.py & sleep 3
+      - name: Start Flask Server in Background
+        run: |
+          python app.py & sleep 3
 
-    - name: Tests mit pytest + Coverage-Analyse
-      run: |
-        pytest --cov=app --cov-report=xml --cov-report=term-missing
+      - name: Run Python Tests with Coverage
+        run: |
+          pytest --maxfail=1 --disable-warnings -q --cov=app --cov-report=xml --cov-report=term-missing
 
-    - name: Coverage-Bericht als Artefakt speichern
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: coverage.xml
+      - name: Check Test Coverage (90% required)
+        run: |
+          coverage_percentage=$(pytest --cov=app | grep "TOTAL" | awk '{print $4}' | tr -d '%')
+          if [ "$coverage_percentage" -lt 90 ]; then
+            echo "Test Coverage is only ${coverage_percentage}%, but 90% is required!"
+            exit 1
+          fi
 
-    - name: Coverage-Check (100% Testabdeckung erforderlich)
-      run: |
-        coverage_percentage=$(pytest --cov=app | grep "TOTAL" | awk '{print $4}' | tr -d '%')
-        if [ "$coverage_percentage" -lt 85 ]; then
-          echo "Test Coverage ist nur ${coverage_percentage}%, aber 100% ist erforderlich!"
-          exit 1
-        fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend-tests
+          npm install
+
+      - name: Run Frontend Tests (Jest)
+        run: |
+          cd frontend-tests
+          npm test
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
