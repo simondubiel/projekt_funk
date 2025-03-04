@@ -13,6 +13,32 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 var marker;
 var radiusCircle;
+var stationMarkers = [];
+
+// Allow selecting coordinates by clicking on the map when the inputs are empty.
+map.on('click', function(e) {
+  // Get the station table body element
+  let tableBody = document.getElementById("station-table");
+  // Check if the table body has no rows (i.e. it's empty)
+  if (!tableBody || tableBody.childElementCount === 0) {
+    let lat = e.latlng.lat;
+    let lon = e.latlng.lng;
+    document.getElementById("latitude").value = lat.toFixed(5);
+    document.getElementById("longitude").value = lon.toFixed(5);
+    updateMapMarker();
+    updateRadiusCircle();
+  }
+});
+
+/* ------------------ Custom Red Icon for Coordinates Marker ------------------ */
+var redIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-shadow.png',
+  shadowSize: [41, 41]
+});
 
 /* ------------------ Map Marker Update ------------------ */
 function updateMapMarker() {
@@ -29,10 +55,9 @@ function updateMapMarker() {
   if (marker) {
     marker.setLatLng([latitude, longitude]);
   } else {
-    marker = L.marker([latitude, longitude]).addTo(map);
+    marker = L.marker([latitude, longitude], { icon: redIcon }).addTo(map);
   }
   map.setView([latitude, longitude], 10);
-  // Ergänzung zur Bestimmung der Halbkugel
   if (latitude >= 0) {
     latitude_positive = true;
   } else {
@@ -133,7 +158,6 @@ async function fetchStationData() {
   // Query-Parameter sicher zusammenbauen
   let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radius)}&station_count=${encodeURIComponent(stationCount)}&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`;
   let fetchUrl = `/get_stations${queryParams}`;
-  console.log("Fetching Stations from:", fetchUrl);
   try {
     const response = await fetch(fetchUrl);
     if (!response.ok) {
@@ -142,10 +166,10 @@ async function fetchStationData() {
     }
     // Zur besseren Fehlersuche zunächst die rohe Antwort loggen
     const rawText = await response.text();
-    console.log("Raw response:", rawText);
     // Anschließend versuchen wir, die Antwort als JSON zu parsen
     const data = JSON.parse(rawText);
     updateStationTable(data);
+    updateStationMarkers(data);
   } catch (error) {
     console.error("Error fetching stations:", error);
   }
@@ -170,6 +194,46 @@ function updateStationTable(stationData) {
     row.addEventListener("click", () => selectStation(row));
     tableBody.appendChild(row);
   });
+}
+
+/* ------------------ Update Station Markers on Map ------------------ */
+function updateStationMarkers(stationData) {
+  console.log("Stationen:", stationData);
+  // Remove any existing station markers from the map.
+  stationMarkers.forEach(m => map.removeLayer(m));
+  stationMarkers = [];
+  if (!stationData || stationData.length === 0) return;
+  stationData.forEach(station => {
+    var lat = parseFloat(station.LATITUDE);
+    var lon = parseFloat(station.LONGITUDE);
+    var m = L.marker([lat, lon]);
+    // When clicking the marker, select the station (similar to table row selection)
+    m.on("click", function() {
+      selectStationByData(station);
+    });
+    m.addTo(map);
+    stationMarkers.push(m);
+  });
+}
+
+/* ------------------ Select Station via Marker Data ------------------ */
+function selectStationByData(station) {
+  // Mimic table row selection using station data
+  let lat = parseFloat(station.LATITUDE);
+  let lon = parseFloat(station.LONGITUDE);
+  map.setView([lat, lon], 10);
+
+  let annualHeader = document.querySelector("#annual-data-container .BoxHeading");
+  let seasonalHeader = document.querySelector("#seasonal-data-container .BoxHeading");
+  let graphHeader = document.querySelector("#chart-container .BoxHeading");
+
+  if (annualHeader) { annualHeader.innerText = `${station.NAME} - Jährliche Durchschnittswerte`; }
+  if (seasonalHeader) { seasonalHeader.innerText = `${station.NAME} - Saisonale Durchschnittswerte`; }
+  if (graphHeader) { graphHeader.innerText = `${station.NAME} - Wetterdaten`; }
+
+  let startYear = getInputValue("start-year");
+  let endYear = getInputValue("end-year");
+  fetchWeatherData(station.ID, startYear, endYear);
 }
 
 /* ------------------ Fetch Weather Data ------------------ */
