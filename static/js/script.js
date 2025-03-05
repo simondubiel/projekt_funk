@@ -142,6 +142,31 @@ function toggleDropdown(event) {
 }
 
 /* ------------------ Fetch Stations based on Criteria ------------------ */
+/* ------------------ Filter Stations by Weather Data ------------------ */
+async function filterStationsByWeatherData(stations, startYear, endYear) {
+  let filteredStations = [];
+  await Promise.all(stations.map(async (station) => {
+    try {
+      const response = await fetch(`/get_weather_data?station_id=${encodeURIComponent(station.ID)}&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`);
+      if (!response.ok) {
+        console.warn(`Weather data not available for station ${station.ID}`);
+        return;
+      }
+      const data = await response.json();
+      // Check if there is any record with ELEMENT "TMIN" or "TMAX"
+      const hasTmin = data.some(record => record.ELEMENT === "TMIN");
+      const hasTmax = data.some(record => record.ELEMENT === "TMAX");
+      if (hasTmin || hasTmax) {
+        filteredStations.push(station);
+      }
+    } catch (error) {
+      console.error(`Error checking weather data for station ${station.ID}:`, error);
+    }
+  }));
+  return filteredStations;
+}
+
+/* ------------------ Fetch Stations based on Criteria ------------------ */
 async function fetchStationData() {
   let stationCount = getInputValue("station-count-input");
   let radius = getInputValue("radius-input");
@@ -150,26 +175,32 @@ async function fetchStationData() {
   let startYear = getInputValue("start-year");
   let endYear = getInputValue("end-year");
 
-  // Prüfen, ob alle Werte vorhanden sind
+  // Check that all criteria are provided
   if (latitude === "" || longitude === "" || radius === "" || stationCount === "" || startYear === "" || endYear === "") {
     console.error("Nicht alle Suchkriterien sind gesetzt.");
     return;
   }
-  // Query-Parameter sicher zusammenbauen
+
+  // Build query parameters safely
   let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radius)}&station_count=${encodeURIComponent(stationCount)}&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`;
   let fetchUrl = `/get_stations${queryParams}`;
+  console.log("Fetching Stations from:", fetchUrl);
   try {
     const response = await fetch(fetchUrl);
     if (!response.ok) {
       let errorText = await response.text();
       throw new Error(`Server returned ${response.status}: ${errorText}`);
     }
-    // Zur besseren Fehlersuche zunächst die rohe Antwort loggen
     const rawText = await response.text();
-    // Anschließend versuchen wir, die Antwort als JSON zu parsen
-    const data = JSON.parse(rawText);
-    updateStationTable(data);
-    updateStationMarkers(data);
+    const stationData = JSON.parse(rawText);
+
+    // Filter stations by checking for available TMIN or TMAX data within the selected timeframe.
+    const filteredStations = await filterStationsByWeatherData(stationData, startYear, endYear);
+    if(filteredStations.length === 0) {
+      console.warn("Keine Stationen mit TMIN oder TMAX Daten in diesem Zeitraum gefunden.");
+    }
+    updateStationTable(filteredStations);
+    updateStationMarkers(filteredStations);
   } catch (error) {
     console.error("Error fetching stations:", error);
   }
@@ -245,6 +276,7 @@ async function fetchWeatherData(stationId, startYear, endYear) {
       throw new Error(`Server returned ${response.status}: ${errorText}`);
     }
     const data = await response.json();
+    console.log("Raw weather data:", data);
     if (data.error) {
       console.error("Error fetching weather data:", data.error);
       document.getElementById("d3-chart").innerHTML = `<p>Error: ${data.error}</p>`;
@@ -356,6 +388,12 @@ function fillMissingYears(data, minYear, maxYear) {
 
 /* ------------------ Draw D3 Chart with Legend ------------------ */
 function drawChart(dataset) {
+  
+  console.log("Annual TMIN:", dataset.annualTmin);
+  console.log("Annual TMAX:", dataset.annualTmax);
+  console.log("Seasonal TMIN:", dataset.seasonalTmin);
+  console.log("Seasonal TMAX:", dataset.seasonalTmax);
+
   // Clear previous chart and legend content
   d3.select("#d3-chart").selectAll("*").remove();
   d3.select("#chart-legend").selectAll("*").remove();
@@ -442,7 +480,7 @@ function drawChart(dataset) {
   svg.append("line")
     .attr("x1", 0)
     .attr("x2", width)
-    .attr("y1", y(0))
+    .attr("y1", y(0)) 
     .attr("y2", y(0))
     .attr("stroke", "black")
     .attr("stroke-width", 1);
@@ -555,37 +593,37 @@ function drawChart(dataset) {
   drawDataTable(window.currentWeatherDataset, window.currentLines);
 
 
-// This function toggles display of each line based on its "visible" flag.
-function updateChartVisibility(lines) {
-  lines.forEach(function(lineData) {
-    d3.select("path[data-name='" + lineData.name + "']")
-      .style("display", lineData.visible ? null : "none");
-  });
-}
+  // This function toggles display of each line based on its "visible" flag.
+  function updateChartVisibility(lines) {
+    lines.forEach(function(lineData) {
+      d3.select("path[data-name='" + lineData.name + "']")
+        .style("display", lineData.visible ? null : "none");
+    });
+  }
 
   // ***************** Interactive Hover Implementation *****************
 
   // Append a focus group to hold a vertical line and one circle per visible line
   var focus = svg.append("g")
-      .attr("class", "focus")
-      .style("display", "none");
+    .attr("class", "focus")
+    .style("display", "none");
 
   // Append a vertical focus line
   focus.append("line")
-      .attr("class", "focus-line")
-      .attr("stroke", "gray")
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "3,3")
-      .attr("y1", 0)
-      .attr("y2", height);
+    .attr("class", "focus-line")
+    .attr("stroke", "gray")
+    .attr("stroke-width", 1)
+    .attr("stroke-dasharray", "3,3")
+    .attr("y1", 0)
+    .attr("y2", height);
 
   // For each line in window.currentLines, add a focus circle (initially hidden)
   window.currentLines.forEach(function(lineData, i) {
     focus.append("circle")
-        .attr("class", "focus-circle")
-        .attr("id", "focus-circle-" + i)
-        .attr("r", 4)
-        .attr("fill", lineData.color);
+      .attr("class", "focus-circle")
+      .attr("id", "focus-circle-" + i)
+      .attr("r", 4)
+      .attr("fill", lineData.color);
   });
 
   // Create a tooltip div (if not already created)
@@ -604,20 +642,20 @@ function updateChartVisibility(lines) {
 
   // Append an overlay rectangle to capture mouse events
   svg.append("rect")
-      .attr("class", "overlay")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("fill", "none")
-      .attr("pointer-events", "all")
-      .on("mouseover", function() {
-          focus.style("display", null);
-          tooltip.style("display", null);
-      })
-      .on("mouseout", function() {
-          focus.style("display", "none");
-          tooltip.style("display", "none");
-      })
-      .on("mousemove", mousemove);
+    .attr("class", "overlay")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("fill", "none")
+    .attr("pointer-events", "all")
+    .on("mouseover", function() {
+        focus.style("display", null);
+        tooltip.style("display", null);
+    })
+    .on("mouseout", function() {
+        focus.style("display", "none");
+        tooltip.style("display", "none");
+    })
+    .on("mousemove", mousemove);
 
   // Use a bisector to find the nearest data point by year
   var bisectYear = d3.bisector(function(d) { return d.year; }).left;
@@ -630,48 +668,48 @@ function updateChartVisibility(lines) {
 
     // Update the vertical focus line position
     focus.select(".focus-line")
-         .attr("x1", mouseX)
-         .attr("x2", mouseX);
+      .attr("x1", mouseX)
+      .attr("x2", mouseX);
 
     // Build tooltip content
     var tooltipContent = "<strong>Year:</strong> " + Math.round(yearAtMouse);
 
     // For each visible line, find the nearest point and update its focus circle
     window.currentLines.forEach(function(lineData, i) {
-        if (!lineData.visible) {
-            d3.select("#focus-circle-" + i).style("display", "none");
-            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
-            return;
-        }
-        var data = lineData.filledData;
-        var idx = bisectYear(data, yearAtMouse);
-        var d0 = data[idx - 1];
-        var d1 = data[idx];
-        var dClosest;
-        if (!d0) {
-            dClosest = d1;
-        } else if (!d1) {
-            dClosest = d0;
-        } else {
-            dClosest = (yearAtMouse - d0.year) > (d1.year - yearAtMouse) ? d1 : d0;
-        }
-        if (dClosest && dClosest.value != null) {
-            d3.select("#focus-circle-" + i)
-              .style("display", null)
-              .attr("cx", x(dClosest.year))
-              .attr("cy", y(dClosest.value));
-            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(2);
-        } else {
-            d3.select("#focus-circle-" + i).style("display", "none");
-            tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
-        }
+      if (!lineData.visible) {
+        d3.select("#focus-circle-" + i).style("display", "none");
+        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
+        return;
+      }
+      var data = lineData.filledData;
+      var idx = bisectYear(data, yearAtMouse);
+      var d0 = data[idx - 1];
+      var d1 = data[idx];
+      var dClosest;
+      if (!d0) {
+        dClosest = d1;
+      } else if (!d1) {
+        dClosest = d0;
+      } else {
+        dClosest = (yearAtMouse - d0.year) > (d1.year - yearAtMouse) ? d1 : d0;
+      }
+      if (dClosest && dClosest.value != null) {
+        d3.select("#focus-circle-" + i)
+          .style("display", null)
+          .attr("cx", x(dClosest.year))
+          .attr("cy", y(dClosest.value));
+        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(2);
+      } else {
+        d3.select("#focus-circle-" + i).style("display", "none");
+        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
+      }
     });
 
     // Position and update tooltip
     tooltip.html(tooltipContent)
            .style("left", (d3.event.pageX + 10) + "px")
            .style("top", (d3.event.pageY - 28) + "px");
-}
+  }
 }
 /* ------------------ Draw Data Table ------------------ */
 function drawDataTable(dataset, lines) {
