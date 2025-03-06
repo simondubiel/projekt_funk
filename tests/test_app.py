@@ -168,3 +168,9 @@ def test_global_error_handler(client):
     response = client.get("/error")
     assert response.status_code == 500
     assert "Ein unerwarteter Fehler ist aufgetreten." in response.json["error"]
+
+def test_preload_status(client):
+    response = client.get("/preload_status")
+    # The status should be either "loading" or "done" depending on preloading
+    assert response.status_code == 200
+    assert response.json["status"] in ["loading", "done"]    

@@ -21,3 +21,17 @@ jobs:
 
       - name: Push Docker Image
         run: docker push ghcr.io/${{ github.repository_owner }}/flask-app:latest
+
+      - name: Test Docker Container
+        run: |
+          docker run -d --name flask-app -p 5000:5000 ghcr.io/${{ github.repository_owner }}/flask-app:latest
+          # Wait for the container to start up
+          sleep 10
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/)
+          if [ "$response" -ne 200 ]; then
+            echo "Docker container did not start correctly. HTTP status: $response"
+            docker logs flask-app
+            docker stop flask-app && docker rm flask-app
+            exit 1
+          fi
+          docker stop flask-app && docker rm flask-app
