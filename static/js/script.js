@@ -21,7 +21,24 @@ resizeObserver.observe(mapContainer);
 
 map.on('click', function(e) {
   let tableBody = document.getElementById("station-table");
-  if (!tableBody || tableBody.childElementCount === 0 || (tableBody.childElementCount === 1 && tableBody.innerText.trim().includes("Keine Stationen verfügbar"))) {
+  let updateCoordinates = false;
+  
+  // If no stations are listed, update coordinates.
+  if (!tableBody || tableBody.childElementCount === 0 ||
+      (tableBody.childElementCount === 1 && tableBody.innerText.trim().includes("Keine Stationen verfügbar"))) {
+    updateCoordinates = true;
+  } else if (radiusCircle) {
+    // If stations are listed, update coordinates only when clicking outside the circle.
+    let circleCenter = radiusCircle.getLatLng();
+    let distanceFromCenter = circleCenter.distanceTo(e.latlng); // distance in meters
+    if (distanceFromCenter > radiusCircle.getRadius()) {
+      updateCoordinates = true;
+    }
+  } else {
+    updateCoordinates = true;
+  }
+  
+  if (updateCoordinates) {
     let lat = e.latlng.lat;
     let lon = e.latlng.lng;
     document.getElementById("latitude").value = lat.toFixed(5);
