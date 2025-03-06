@@ -97,6 +97,7 @@ function updateRadiusCircle() {
 }
 
 function selectStation(row) {
+  showLoading();
   document.querySelectorAll("#station-table tr").forEach(r => r.classList.remove("selected"));
   row.classList.add("selected");
 
@@ -123,7 +124,14 @@ function selectStation(row) {
 
   let startYear = getInputValue("start-year");
   let endYear = getInputValue("end-year");
-  fetchWeatherData(stationId, startYear, endYear);
+  fetchWeatherData(stationId, startYear, endYear)
+    .then(() => {
+      hideLoading();
+    })
+    .catch(error => {
+      console.error(error);
+      hideLoading();
+    });
 }
 
 function toggleDropdown(event) {
@@ -744,9 +752,16 @@ function drawDataTable(dataset, lines) {
   }
 }
 
-function confirmSelection() {
+async function confirmSelection() {
+  showLoading();
   saveSearchCriteria();
-  fetchStationData();
+  try {
+    await fetchStationData();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    hideLoading();
+  }
 }
 
 function saveSearchCriteria() {
@@ -795,3 +810,34 @@ document.getElementById("longitude").addEventListener("input", () => {
 document.getElementById("radius-input").addEventListener("input", updateRadiusCircle);
 document.getElementById("confirm-btn").addEventListener("click", confirmSelection);
 
+function showLoading() {
+  document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  // Ensure the loading overlay is visible at the beginning
+  showLoading();
+  // Start polling the preload status
+  checkPreloadStatus();
+});
+
+function checkPreloadStatus() {
+  fetch('/preload_status')
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "done") {
+            hideLoading();
+        } else {
+            // If still loading, check again after 1 second
+            setTimeout(checkPreloadStatus, 1000);
+        }
+    })
+    .catch(error => {
+        console.error("Error checking preload status:", error);
+        setTimeout(checkPreloadStatus, 1000);
+    });
+}

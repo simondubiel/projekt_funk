@@ -12,9 +12,15 @@ GHCN_BASE_URL = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
-# Globales Cache für Stations- und Inventory-Daten
 cached_stations = None
 cached_inventory = None
+preloading_complete = False
+
+@app.route('/preload_status')
+def preload_status():
+    if preloading_complete:
+        return jsonify({"status": "done"})
+    return jsonify({"status": "loading"})
 
 @app.route('/')
 def index():
@@ -255,9 +261,11 @@ if app.config.get("TESTING"):
 if __name__ == "__main__":
     # Starte einen Hintergrund-Thread zum Laden der Stations- und Inventory-Daten einmalig beim App-Start.
     def background_load():
+        global preloading_complete
         print("Preloading station and inventory data...")
         load_stations()
         load_inventory()
+        preloading_complete = True
         print("Preloading complete.")
 
     thread = threading.Thread(target=background_load)
@@ -266,3 +274,4 @@ if __name__ == "__main__":
 
     print("Starting the app.")
     app.run(debug=True)
+
