@@ -50,10 +50,25 @@ def load_stations():
         stations_data = response.text
         colspecs = [(0, 11), (12, 20), (21, 30), (31, 37), (38, 40), (41, 71)]
         columns = ['ID', 'LATITUDE', 'LONGITUDE', 'ELEVATION', 'STATE', 'NAME']
-        cached_stations = pd.read_fwf(StringIO(stations_data), colspecs=colspecs, names=columns)
-        cached_stations.dropna(subset=['LATITUDE', 'LONGITUDE'], inplace=True)
-        cached_stations["STATE"] = cached_stations["STATE"].fillna("unknown")
+        df_stations = pd.read_fwf(StringIO(stations_data), colspecs=colspecs, names=columns)
+        df_stations.dropna(subset=['LATITUDE', 'LONGITUDE'], inplace=True)
+        df_stations["STATE"] = df_stations["STATE"].fillna("unknown")
         print("Station data loaded successfully.")
+        
+        # Filter stations that provide TMIN and TMAX data using inventory information.
+        inventory_df = load_inventory()
+        if inventory_df is None:
+            print("Failed to load inventory data. Returning station data without filtering.")
+            cached_stations = df_stations
+        else:
+            # Select inventory rows with TMIN or TMAX.
+            valid_inventory = inventory_df[inventory_df['ELEMENT'].isin(['TMIN', 'TMAX'])]
+            # Group by station ID and keep only those that have both TMIN and TMAX.
+            valid_station_ids = valid_inventory.groupby('ID')['ELEMENT'].nunique()
+            valid_station_ids = valid_station_ids[valid_station_ids == 2].index.tolist()
+            df_stations = df_stations[df_stations['ID'].isin(valid_station_ids)]
+            cached_stations = df_stations
+            print(f"Filtered stations: {len(cached_stations)} stations have both TMIN and TMAX data.")
     return cached_stations
 
 def load_inventory():
@@ -197,8 +212,8 @@ def get_stations():
 
     valid_inventory = inventory_df[
          (inventory_df['ELEMENT'].isin(['TMIN', 'TMAX'])) &
-         (inventory_df['FIRSTYEAR'].astype(int) <= end_year) &
-         (inventory_df['LASTYEAR'].astype(int) >= start_year)
+         (inventory_df['FIRSTYEAR'].astype(int) <= start_year) &
+         (inventory_df['LASTYEAR'].astype(int) >= end_year)
     ]
     valid_station_ids = valid_inventory['ID'].unique()
 

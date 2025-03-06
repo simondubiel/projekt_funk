@@ -95,12 +95,6 @@ function updateRadiusCircle() {
     return;
   }
 
-  if (radiusKm > 1000) {
-    radiusKm = 1000;
-    document.getElementById("radius-input").value = "1000";
-    alert("Der Radius darf maximal 1000 km betragen. Der Wert wurde auf 1000 km gesetzt.");
-  }
-
   if (radiusCircle) {
     map.removeLayer(radiusCircle);
   }
@@ -200,11 +194,6 @@ async function fetchStationData() {
   if (isNaN(radiusKm)) {
     console.error("Ungültiger Radiuswert.");
     return;
-  }
-  if (radiusKm > 1000) {
-    radiusKm = 1000;
-    document.getElementById("radius-input").value = "1000";
-    alert("Der Radius darf maximal 1000 km betragen. Der Wert wurde auf 1000 km gesetzt.");
   }
 
   // Request many stations; server-side filtering will return only those that have valid inventory.
@@ -678,7 +667,7 @@ function drawChart(dataset) {
           .style("display", null)
           .attr("cx", x(dClosest.year))
           .attr("cy", y(dClosest.value));
-        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(2);
+        tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> " + dClosest.value.toFixed(1);
       } else {
         d3.select("#focus-circle-" + i).style("display", "none");
         tooltipContent += "<br><span style='color:" + lineData.color + "'>" + lineData.name + ":</span> n/a";
@@ -722,7 +711,7 @@ function drawDataTable(dataset, lines) {
     Object.keys(annualData).sort().forEach(year => {
       annualTableHTML += `<tr><td>${year}</td>`;
       annualSeries.forEach(series => {
-        annualTableHTML += `<td>${annualData[year][series] ? annualData[year][series].toFixed(2) : ""}</td>`;
+        annualTableHTML += `<td>${annualData[year][series] ? annualData[year][series].toFixed(1) : ""}</td>`;
       });
       annualTableHTML += "</tr>";
     });
@@ -760,7 +749,7 @@ function drawDataTable(dataset, lines) {
       let row = seasonalData[year];
       seasonalTableHTML += `<tr><td>${row.year}</td>`;
       seasonalSeries.forEach(series => {
-        seasonalTableHTML += `<td>${row[series] !== undefined ? row[series].toFixed(2) : ""}</td>`;
+        seasonalTableHTML += `<td>${row[series] !== undefined ? row[series].toFixed(1) : ""}</td>`;
       });
       seasonalTableHTML += "</tr>";
     });
@@ -810,6 +799,22 @@ function setStationCount(value) {
   document.getElementById("station-count-dropdown").style.display = "none";
 }
 
+document.getElementById("station-count-input").addEventListener("input", () => {
+  if (document.getElementById("station-count-input").value > 10) {
+    stationCount = 10;
+    document.getElementById("station-count-input").value = "10";
+    alert("Es können maximal 10 Stationen angezeigt werden. Der Wert wurde auf 10 gesetzt.");
+  }
+});
+
+document.getElementById("radius-input").addEventListener("input", () => {
+  if (document.getElementById("radius-input").value > 100) {
+    radiusKm = 100;
+    document.getElementById("radius-input").value = "100";
+    alert("Der Radius darf maximal 100 km betragen. Der Wert wurde auf 100 km gesetzt.");
+  }
+});
+
 function setRadiusValue(value) {
   document.getElementById("radius-input").value = value;
   document.getElementById("radius-dropdown").style.display = "none";
@@ -835,7 +840,7 @@ function hideLoading() {
   document.getElementById('loading-overlay').style.display = 'none';
 }
 
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", () => {
   // Ensure the loading overlay is visible at the beginning
   showLoading();
   // Start polling the preload status
