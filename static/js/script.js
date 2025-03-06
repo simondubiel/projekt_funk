@@ -57,11 +57,7 @@ function updateMapMarker() {
     marker = L.marker([latitude, longitude], { icon: redIcon }).addTo(map);
   }
   map.setView([latitude, longitude], 10);
-  if (latitude >= 0) {
-    latitude_positive = true;
-  } else {
-    latitude_positive = false;
-  }
+  latitude_positive = (latitude >= 0);
 }
 
 function updateRadiusCircle() {
@@ -80,6 +76,12 @@ function updateRadiusCircle() {
   if (isNaN(latitude) || isNaN(longitude) || isNaN(radiusKm)) {
     console.warn("Ungültige Werte für den Radius oder die Koordinaten.");
     return;
+  }
+
+  if (radiusKm > 1000) {
+    radiusKm = 1000;
+    document.getElementById("radius-input").value = "1000";
+    alert("Der Radius darf maximal 1000 km betragen. Der Wert wurde auf 1000 km gesetzt.");
   }
 
   if (radiusCircle) {
@@ -169,8 +171,19 @@ async function fetchStationData() {
     return;
   }
 
-  // Instead of using the given stationCount here, request a large number of stations
-  let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radius)}&station_count=9999&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`;
+  let radiusKm = parseFloat(radius);
+  if (isNaN(radiusKm)) {
+    console.error("Ungültiger Radiuswert.");
+    return;
+  }
+  if (radiusKm > 1000) {
+    radiusKm = 1000;
+    document.getElementById("radius-input").value = "1000";
+    alert("Der Radius darf maximal 1000 km betragen. Der Wert wurde auf 1000 km gesetzt.");
+  }
+
+  // Request many stations; server-side filtering will return only those that have valid inventory.
+  let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radiusKm)}&station_count=9999&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`;
   let fetchUrl = `/get_stations${queryParams}`;
   console.log("Fetching Stations from:", fetchUrl);
   
@@ -183,13 +196,12 @@ async function fetchStationData() {
     const rawText = await response.text();
     const stationData = JSON.parse(rawText);
 
-    // Filter stations that have valid TMIN or TMAX data
-    const filteredStations = await filterStationsByWeatherData(stationData, startYear, endYear);
-    if(filteredStations.length === 0) {
-      console.warn("Keine Stationen mit TMIN oder TMAX Daten in diesem Zeitraum gefunden.");
+    if (stationData.length === 0) {
+      console.warn("Keine Stationen gefunden, die die Kriterien erfüllen.");
     }
     
-    const limitedStations = filteredStations.slice(0, parseInt(stationCount));
+    // Limit the number of stations to display.
+    const limitedStations = stationData.slice(0, parseInt(stationCount));
     
     updateStationTable(limitedStations);
     updateStationMarkers(limitedStations);
@@ -653,6 +665,7 @@ function drawChart(dataset) {
            .style("top", (d3.event.pageY - 28) + "px");
   }
 }
+
 function drawDataTable(dataset, lines) {
   let visibleSeries = lines.filter(line => line.visible).map(line => line.name);
   
@@ -781,3 +794,4 @@ document.getElementById("longitude").addEventListener("input", () => {
 });
 document.getElementById("radius-input").addEventListener("input", updateRadiusCircle);
 document.getElementById("confirm-btn").addEventListener("click", confirmSelection);
+

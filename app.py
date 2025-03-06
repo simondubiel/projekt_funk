@@ -12,19 +12,19 @@ GHCN_BASE_URL = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
-# Globales Cache für Stationsdaten
+# Globales Cache für Stations- und Inventory-Daten
 cached_stations = None
+cached_inventory = None
 
 @app.route('/')
 def index():
-    # Ensure stations are loaded (or trigger loading if not already done)
     stations = load_stations()
     station_count = len(stations) if stations is not None else 0
     return render_template("index.html", station_count=station_count)
 
 def haversine(lat1, lon1, lat2, lon2):
     """Berechnet die Entfernung zwischen zwei Punkten auf der Erde in km."""
-    R = 6371.0  # Erdradius in Kilometern
+    R = 6371.0
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
     dlon = lon2 - lon1
@@ -33,11 +33,6 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 def load_stations():
-    """
-    Lädt die Stationsdaten aus der Datei ghcnd-stations.txt.
-    Die Daten werden einmalig geladen und in der globalen Variable cached_stations gespeichert.
-    Fehlende STATE-Werte werden durch "unknown" ersetzt.
-    """
     global cached_stations
     if cached_stations is None:
         print("Loading station data from NOAA...")
@@ -55,8 +50,28 @@ def load_stations():
         print("Station data loaded successfully.")
     return cached_stations
 
+def load_inventory():
+    global cached_inventory
+    if cached_inventory is not None:
+        # Inventory already loaded; return cached version.
+        return cached_inventory
+
+    print("Loading inventory data from NOAA...")
+    inventory_url = f"{GHCN_BASE_URL}ghcnd-inventory.txt"
+    response = requests.get(inventory_url)
+    if response.status_code != 200:
+        print("Failed to load inventory data. HTTP status code:", response.status_code)
+        return None
+    inventory_data = response.text
+    # Using the column specs as described in your README
+    colspecs = [(0, 11), (12, 20), (21, 30), (31, 35), (36, 40), (41, 45)]
+    columns = ['ID', 'LATITUDE', 'LONGITUDE', 'ELEMENT', 'FIRSTYEAR', 'LASTYEAR']
+    cached_inventory = pd.read_fwf(StringIO(inventory_data), colspecs=colspecs, names=columns)
+    cached_inventory.dropna(subset=['ID'], inplace=True)
+    print("Inventory data loaded successfully.")
+    return cached_inventory
+
 def fetch_and_filter_stations(lat, lon, radius_km):
-    """Filtert Stationen basierend auf Koordinaten und Radius."""
     stations_df = load_stations()
     if stations_df is None:
         return pd.DataFrame()
@@ -64,6 +79,9 @@ def fetch_and_filter_stations(lat, lon, radius_km):
         lambda row: haversine(lat, lon, row['LATITUDE'], row['LONGITUDE']), axis=1
     )
     return stations_df[stations_df["DISTANCE"] <= radius_km].sort_values(by="DISTANCE")
+
+# ------------------------------
+# Parsing and weather data fetching functions
 
 def parse_ghcnd_csv_from_string(data):
     """
@@ -102,7 +120,6 @@ def parse_ghcnd_dly_from_string(data):
         element = line[17:21]
         # Für jeden Tag des Monats
         for day in range(1, 32):
-            # VALUE: Spalten 22-26 (Index 21 bis 26)
             start_index = 21 + (day - 1) * 8
             end_index = start_index + 5
             value_str = line[start_index:end_index]
@@ -112,7 +129,6 @@ def parse_ghcnd_dly_from_string(data):
                 continue
             if value == -9999:
                 continue
-            # Erzeuge Datum; ungültige Tage werden übersprungen
             try:
                 date = pd.Timestamp(year=year, month=month, day=day)
             except Exception:
@@ -125,7 +141,7 @@ def fetch_weather_data(station_id):
     """
     Versucht, alle verfügbaren Wetterdaten für die Station abzurufen.
     Zuerst wird versucht, die CSV-Version aus by_station zu laden.
-    Scheitert das (z. B. 404), wird als Fallback die .dly-Datei aus dem "all"-Verzeichnis abgerufen.
+    Scheitert das, wird als Fallback die .dly-Datei aus dem "all"-Verzeichnis abgerufen.
     """
     print(f"Fetching weather data for station {station_id} (CSV)...")
     csv_url = f"{GHCN_BASE_URL}by_station/{station_id}.csv"
@@ -146,6 +162,9 @@ def fetch_weather_data(station_id):
             print(f"Failed to fetch weather data for station {station_id} from both CSV and .dly sources. HTTP status for .dly: {response2.status_code}")
             return None
 
+# ------------------------------
+# Modified /get_stations endpoint with inventory filtering
+
 @app.route('/get_stations', methods=['GET'])
 def get_stations():
     try:
@@ -153,14 +172,35 @@ def get_stations():
         longitude = float(request.args.get('longitude'))
         radius_km = float(request.args.get('radius_km'))
         station_count = int(request.args.get('station_count', 10))
+        start_year = int(request.args.get('start_year'))
+        end_year = int(request.args.get('end_year'))
     except (TypeError, ValueError) as e:
         print("Invalid parameters for get_stations request:", e)
         return jsonify({"error": "Invalid parameters"}), 400
 
+    # Get stations by spatial filtering.
     stations_df = fetch_and_filter_stations(latitude, longitude, radius_km)
+    if stations_df is None or stations_df.empty:
+         return jsonify([])
+
+    # Load inventory and filter for TMIN/TMAX records overlapping the desired time span.
+    inventory_df = load_inventory()
+    if inventory_df is None or inventory_df.empty:
+         print("No inventory data available")
+         return jsonify([])
+
+    valid_inventory = inventory_df[
+         (inventory_df['ELEMENT'].isin(['TMIN', 'TMAX'])) &
+         (inventory_df['FIRSTYEAR'].astype(int) <= end_year) &
+         (inventory_df['LASTYEAR'].astype(int) >= start_year)
+    ]
+    valid_station_ids = valid_inventory['ID'].unique()
+
+    # Keep only stations that are in the valid inventory.
+    stations_df = stations_df[stations_df['ID'].isin(valid_station_ids)]
     stations_df = stations_df.head(station_count)
     stations = stations_df.to_dict(orient="records")
-    print(f"Returning {len(stations)} stations for coordinates ({latitude}, {longitude}) with radius {radius_km} km.")
+    print(f"Returning {len(stations)} stations for coordinates ({latitude}, {longitude}) with radius {radius_km} km that have TMIN/TMAX data between {start_year} and {end_year}.")
     return jsonify(stations)
 
 @app.route('/get_weather_data', methods=['GET'])
@@ -213,12 +253,12 @@ if app.config.get("TESTING"):
         raise Exception("Simulierter Fehler")
 
 if __name__ == "__main__":
-    # Starte einen Hintergrund-Thread zum Laden der Stationsdaten,
-    # damit die Webseite sofort geladen wird.
+    # Starte einen Hintergrund-Thread zum Laden der Stations- und Inventory-Daten einmalig beim App-Start.
     def background_load():
-        print("Loading station data in background...")
+        print("Preloading station and inventory data...")
         load_stations()
-        print("Station data loaded in background.")
+        load_inventory()
+        print("Preloading complete.")
 
     thread = threading.Thread(target=background_load)
     thread.daemon = True
