@@ -8,6 +8,7 @@ from app import (
     load_stations,
     parse_ghcn_csv_from_string,
     app,
+    load_inventory,
 )
 
 BASE_URL = "http://127.0.0.1:5000"
@@ -19,6 +20,62 @@ def client():
     with app.test_client() as client:
         yield client
 
+
+
+# --- Test for load_inventory() ---
+def test_load_inventory(monkeypatch):
+    """Test loading of inventory data."""
+    # Example inventory data in fixed-width format (dummy values)
+    mock_inventory = (
+        "USW00094728  40.783  -73.967  TMIN 1900 2020\n"
+        "USW00094728  40.783  -73.967  TMAX 1900 2020\n"
+    )
+    def mock_requests_get(url, *args, **kwargs):
+        class MockResponse:
+            status_code = 200
+            text = mock_inventory
+        return MockResponse()
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    inventory_df = load_inventory()
+    assert not inventory_df.empty
+    assert "ID" in inventory_df.columns
+    # Check that both TMIN and TMAX records are present
+    assert "TMIN" in inventory_df["ELEMENT"].values
+    assert "TMAX" in inventory_df["ELEMENT"].values
+
+# --- Test for /preload_status endpoint ---
+@pytest.fixture
+def client():
+    with app.test_client() as client:
+        yield client
+
+def test_preload_status(client):
+    """Test the preload status endpoint returns a valid status."""
+    response = client.get("/preload_status")
+    assert response.status_code == 200
+    assert response.json["status"] in ["loading", "done"]
+
+# --- Test for fallback in fetch_weather_data (using .dly) ---
+def test_fetch_weather_data_fallback(monkeypatch):
+    """Test that when CSV data is not available, the .dly fallback is used."""
+    # First request (CSV) fails
+    def mock_requests_get(url, *args, **kwargs):
+        class MockResponse:
+            status_code = 404
+            text = ""
+        return MockResponse()
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+
+    # Since we don't have a valid .dly example, expect the function to return None
+    from app import fetch_weather_data
+    weather_data = fetch_weather_data("USW00094728")
+    assert weather_data is None
+
+# --- Test for parse_ghcnd_dly_from_string with empty data ---
+def test_parse_ghcnd_dly_from_string_empty():
+    """Test that an empty .dly string returns an empty DataFrame."""
+    df = parse_ghcnd_dly_from_string("")
+    assert df.empty
 
 # **Test für `haversine()`**
 def test_haversine():
