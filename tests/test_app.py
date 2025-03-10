@@ -1,6 +1,7 @@
 import pytest
 import requests
 import pandas as pd
+import json
 from io import StringIO
 from app import (
     haversine,
@@ -25,7 +26,6 @@ def client():
 
 def test_load_inventory(monkeypatch):
     """Test loading of inventory data."""
-    # Example inventory data in fixed-width format (dummy values)
     mock_inventory = (
         "USW00094728"    # indices 0-10: ID (11 chars)
         " "              # index 11 filler
@@ -39,17 +39,17 @@ def test_load_inventory(monkeypatch):
         " "              # index 40 filler
         "2020"           # indices 41-44: LASTYEAR (4 chars)
         "\n"
-        "USW00094728"    
-        " "              
-        " 40.783 "       
-        " "              
-        "  -73.967"      
-        " "              
-        "TMAX"           
-        " "              
-        "1900"           
-        " "              
-        "2020"           
+        "USW00094728"
+        " "
+        " 40.783 "
+        " "
+        "  -73.967"
+        " "
+        "TMAX"
+        " "
+        "1900"
+        " "
+        "2020"
         "\n"
     )
     def mock_requests_get(url, *args, **kwargs):
@@ -57,13 +57,12 @@ def test_load_inventory(monkeypatch):
             status_code = 200
             text = mock_inventory
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
-    # Clear any cached inventory before test.
-    app.cached_inventory = None
+    # Patch the requests.get used in the app module.
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
+    app.cached_inventory = None  # Clear cache for a fresh load.
     inventory_df = load_inventory()
     assert not inventory_df.empty
     assert "ID" in inventory_df.columns
-    # Check that both TMIN and TMAX records are present
     assert "TMIN" in inventory_df["ELEMENT"].values
     assert "TMAX" in inventory_df["ELEMENT"].values
 
@@ -74,9 +73,9 @@ def test_load_inventory_failure(monkeypatch):
             status_code = 404
             text = ""
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
-    # Clear cache so that the failure branch is taken.
-    app.cached_inventory = None
+    # Patch the requests.get used in the app module.
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
+    app.cached_inventory = None  # Clear cache so failure branch is taken.
     inv_df = load_inventory()
     assert inv_df is None
 
@@ -95,7 +94,7 @@ def test_fetch_weather_data_fallback(monkeypatch):
             status_code = 404
             text = ""
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
     weather_data = fetch_weather_data("USW00094728")
     assert weather_data is None
 
@@ -109,14 +108,12 @@ def test_parse_ghcnd_dly_from_string_empty():
 def test_haversine():
     """Test distance calculation between two coordinates."""
     dist = haversine(52.5200, 13.4050, 48.8566, 2.3522)  # Berlin → Paris
-    assert round(dist, 2) == 877.46  # Expected ~877.46 km
-    # Test for identical coordinates (expect 0 km)
+    assert round(dist, 2) == 877.46
     assert haversine(52.5200, 13.4050, 52.5200, 13.4050) == 0
 
 # **Test for load_stations()**
 def test_load_stations(monkeypatch):
     """Test loading of station data."""
-    # Minimal fixed-width station data (71 characters expected)
     mock_data = (
         "USW00094728"    # 0-10: ID
         " "              # 11
@@ -135,7 +132,7 @@ def test_load_stations(monkeypatch):
             status_code = 200
             text = mock_data
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
     stations_df = load_stations()
     assert not stations_df.empty
     assert "ID" in stations_df.columns
@@ -145,16 +142,16 @@ def test_load_stations(monkeypatch):
 def test_fetch_and_filter_stations(monkeypatch):
     """Test filtering of stations by coordinates and radius."""
     mock_data = (
-        "USW00094728"    
-        " "              
-        " 40.783 "       
-        " "              
-        "  -73.967"      
-        " "              
-        "  39.9"         
-        " "              
-        "NY"             
-        " "              
+        "USW00094728"
+        " "
+        " 40.783 "
+        " "
+        "  -73.967"
+        " "
+        "  39.9"
+        " "
+        "NY"
+        " "
         "NEW YORK CITY CENTRAL PARK    "
     )
     def mock_requests_get(*args, **kwargs):
@@ -162,7 +159,7 @@ def test_fetch_and_filter_stations(monkeypatch):
             status_code = 200
             text = mock_data
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
     filtered_stations = fetch_and_filter_stations(40.7, -74.0, 50)
     assert not filtered_stations.empty
     assert "ID" in filtered_stations.columns
@@ -171,7 +168,6 @@ def test_fetch_and_filter_stations(monkeypatch):
 # **Test for fetch_weather_data() with CSV**
 def test_fetch_weather_data(monkeypatch):
     """Test fetching weather data from CSV."""
-    # Provide CSV data without a header row
     mock_data = (
         "USW00094728,20230101,TMAX,30,M,X,S,0700\n"
         "USW00094728,20230102,TMIN,10,M,X,S,0700"
@@ -181,7 +177,7 @@ def test_fetch_weather_data(monkeypatch):
             status_code = 200
             text = mock_data
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
     weather_data = fetch_weather_data("USW00094728")
     assert weather_data is not None
     assert "DATE" in weather_data.columns
@@ -193,7 +189,6 @@ def test_fetch_weather_data(monkeypatch):
 # **Test for parse_ghcnd_csv_from_string()**
 def test_parse_ghcnd_csv_from_string():
     """Test parsing of NOAA CSV data."""
-    # Provide CSV data without a header row.
     mock_data = (
         "USW00094728,20230101,TMAX,30,M,X,S,0700\n"
         "USW00094728,20230102,TMIN,10,M,X,S,0700"
@@ -206,7 +201,7 @@ def test_parse_ghcnd_csv_from_string():
     assert df.iloc[0]["ELEMENT"] == "TMAX"
     assert df.iloc[1]["ELEMENT"] == "TMIN"
 
-# **API Test: /get_weather_data with valid parameters**
+# **API Test: /get_weather_data with valid CSV data**
 def test_get_weather_data_endpoint(monkeypatch, client):
     """Test the /get_weather_data endpoint with valid CSV data."""
     mock_csv = (
@@ -218,10 +213,11 @@ def test_get_weather_data_endpoint(monkeypatch, client):
             status_code = 200
             text = mock_csv
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
     response = client.get("/get_weather_data?station_id=USW00094728&start_year=2020&end_year=2020")
     assert response.status_code == 200
-    data = response.get_json()
+    # Since the endpoint returns a JSON string, load it manually.
+    data = json.loads(response.data.decode("utf-8"))
     # Only the 2020 record should be returned.
     for record in data:
         assert pd.to_datetime(record["DATE"]).year == 2020
@@ -251,7 +247,7 @@ def test_fetch_weather_data_request_failed(monkeypatch):
             status_code = 404
             text = ""
         return MockResponse()
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(app.requests, "get", mock_requests_get)
     weather_data = fetch_weather_data("INVALID_ID")
     assert weather_data is None
 
@@ -265,8 +261,7 @@ def test_index_page(client):
 # **Test for the global error handler**
 def test_global_error_handler(client):
     """Test that unexpected errors are handled by the global error handler."""
-    # Enable testing mode to ensure /error route is registered.
-    app.config["TESTING"] = True
+    app.config["TESTING"] = True  # Ensure /error route is registered.
     response = client.get("/error")
     assert response.status_code == 500
     assert "Ein unerwarteter Fehler" in response.json["error"]
