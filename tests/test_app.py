@@ -409,7 +409,7 @@ def test_load_stations_failure(monkeypatch):
             text = ""
         return MockResponse()
     # Patch the requests.get used in the app module.
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
+    monkeypatch.setattr(requests, "get", mock_requests_get)
     # Clear cached data.
     app.cached_stations = None
     app.cached_inventory = None
