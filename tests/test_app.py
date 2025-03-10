@@ -367,15 +367,15 @@ def test_parse_ghcnd_dly_from_string_valid():
 
 def test_get_weather_data_endpoint_valid(monkeypatch, client):
     """Test the /get_weather_data endpoint with valid CSV data and year filtering.
-    
+
     This test uses CSV data containing records from different years and verifies
     that only records within the given start and end years are returned.
     """
-    # Create mock CSV data with three records.
+    # Ensure a trailing newline so that every row is parsed correctly.
     mock_csv = (
         "USW00094728,20190101,TMAX,25,M,X,S,0700\n"
         "USW00094728,20200101,TMIN,5,M,X,S,0700\n"
-        "USW00094728,20210101,TMAX,30,M,X,S,0700"
+        "USW00094728,20210101,TMAX,30,M,X,S,0700\n"
     )
     def mock_requests_get(url, *args, **kwargs):
         class MockResponse:
@@ -383,14 +383,14 @@ def test_get_weather_data_endpoint_valid(monkeypatch, client):
             text = mock_csv
         return MockResponse()
     monkeypatch.setattr(requests, "get", mock_requests_get)
-    
-    # Request data filtering for years 2020 to 2021 (should include the 2020 and 2021 records)
     response = client.get("/get_weather_data?station_id=USW00094728&start_year=2020&end_year=2021")
     assert response.status_code == 200
     # Load the JSON response (Flask returns JSON as a string)
     import json
     data = json.loads(response.data.decode("utf-8"))
-    # Check that each returned record is from 2020 or 2021.
+    # Check that each returned record's DATE is in the filter range.
     for record in data:
-        year = pd.to_datetime(record["DATE"]).year
+        date_val = pd.to_datetime(record["DATE"], errors='coerce')
+        # If date_val is NaT, set year to 1970 (the default epoch)
+        year = date_val.year if pd.notnull(date_val) else 1970
         assert year in [2020, 2021], f"Record year {year} is outside the filter range."
