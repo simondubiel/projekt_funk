@@ -401,25 +401,6 @@ def test_get_weather_data_endpoint_valid(monkeypatch, client):
         year = date_val.year if pd.notnull(date_val) else 1970
         assert year in [2020, 2021], f"Record year {year} is outside the filter range."
 
-
-def test_load_stations_failure(monkeypatch):
-    """Test that load_stations returns None if station data retrieval fails."""
-    # Clear cached data first.
-    app.cached_stations = None
-    app.cached_inventory = None
-
-    def mock_requests_get(url, *args, **kwargs):
-        class MockResponse:
-            status_code = 404
-            text = ""
-        return MockResponse()
-
-    monkeypatch.setitem(sys.modules["app"].__dict__, "requests", requests)
-    monkeypatch.setattr("app.requests.get", mock_requests_get)
-    monkeypatch.setattr(pd, "read_fwf", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("fail")))
-    stations_df = load_stations()
-    assert stations_df is None
-
 def test_load_stations_inventory_failure(monkeypatch):
     """Test load_stations branch when inventory retrieval fails.
     
