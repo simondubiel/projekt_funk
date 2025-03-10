@@ -13,25 +13,41 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build Docker Image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/flask-app:latest .
-
-      - name: Push Docker Image
-        run: docker push ghcr.io/${{ github.repository_owner }}/flask-app:latest
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/flask-app:latest
+          platforms: linux/amd64,linux/arm64
 
       - name: Test Docker Container
         run: |
-          docker run -d --name flask-app -p 5000:5000 ghcr.io/${{ github.repository_owner }}/flask-app:latest
-          # Wait for the container to start up
-          sleep 10
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/)
-          if [ "$response" -ne 200 ]; then
-            echo "Docker container did not start correctly. HTTP status: $response"
-            docker logs flask-app
-            docker stop flask-app && docker rm flask-app
-            exit 1
-          fi
+          container_id=$(docker run -d --name flask-app -p 5000:5000 ghcr.io/${{ github.repository_owner }}/flask-app:latest)
+          retries=0
+          max_retries=10
+          until [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5000/)" -eq 200 ]; do
+            echo "Waiting for container to start..."
+            sleep 3
+            retries=$((retries+1))
+            if [ $retries -eq $max_retries ]; then
+              echo "Docker container did not start correctly."
+              docker logs flask-app
+              docker stop flask-app && docker rm flask-app
+              exit 1
+            fi
+          done
           docker stop flask-app && docker rm flask-app
+
+      - name: Test with Docker Compose
+        run: |
+          docker-compose up -d
+          sleep 10
+          docker-compose ps
+          docker-compose down
