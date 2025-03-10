@@ -377,20 +377,25 @@ def test_get_weather_data_endpoint_valid(monkeypatch, client):
         "USW00094728,20200101,TMIN,5,M,X,S,0700\n"
         "USW00094728,20210101,TMAX,30,M,X,S,0700\n"
     )
+
     def mock_requests_get(url, *args, **kwargs):
         class MockResponse:
             status_code = 200
             text = mock_csv
         return MockResponse()
+
     monkeypatch.setattr(requests, "get", mock_requests_get)
-    response = client.get("/get_weather_data?station_id=USW00094728&start_year=2020&end_year=2021")
+    response = client.get(
+        "/get_weather_data?station_id=USW00094728&start_year=2020&end_year=2021"
+    )
     assert response.status_code == 200
     # Load the JSON response (Flask returns JSON as a string)
     import json
+
     data = json.loads(response.data.decode("utf-8"))
     # Check that each returned record's DATE is in the filter range.
     for record in data:
-        date_val = pd.to_datetime(record["DATE"], errors='coerce')
-        # If date_val is NaT, set year to 1970 (the default epoch)
+        # Convert using unit='ms' because the DATE is serialized as epoch milliseconds.
+        date_val = pd.to_datetime(record["DATE"], unit="ms", errors="coerce")
         year = date_val.year if pd.notnull(date_val) else 1970
         assert year in [2020, 2021], f"Record year {year} is outside the filter range."
