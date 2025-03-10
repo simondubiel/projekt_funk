@@ -51,10 +51,10 @@ jobs:
         name: coverage-report
         path: coverage.xml
 
-    - name: Coverage-Check (80% Testabdeckung erforderlich)
+    - name: Coverage-Check (>80% Testabdeckung erforderlich)
       run: |
         coverage_percentage=$(pytest --cov=app | grep "TOTAL" | awk '{print $4}' | tr -d '%')
-        if [ "$coverage_percentage" -lt 80 ]; then
-          echo "Test Coverage ist nur ${coverage_percentage}%, aber 80% ist erforderlich!"
+        if [ "$coverage_percentage" -lt 81 ]; then
+          echo "Test Coverage ist nur ${coverage_percentage}%, aber >80% ist erforderlich!"
           exit 1
         fi
