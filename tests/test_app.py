@@ -403,19 +403,19 @@ def test_get_weather_data_endpoint_valid(monkeypatch, client):
 
 def test_load_stations_failure(monkeypatch):
     """Test that load_stations returns None if station data retrieval fails."""
+    # Clear cached data first.
+    app.cached_stations = None
+    app.cached_inventory = None
+
     def mock_requests_get(url, *args, **kwargs):
         class MockResponse:
             status_code = 404
             text = ""
         return MockResponse()
-    # Patch the requests.get used in the app module.
-    monkeypatch.setattr(requests, "get", mock_requests_get)
-    # Clear cached data.
-    app.cached_stations = None
-    app.cached_inventory = None
-    stations_df = load_stations()
-    assert stations_df.empty
 
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    stations_df = load_stations()
+    assert stations_df is None
 
 def test_load_stations_inventory_failure(monkeypatch):
     """Test load_stations branch when inventory retrieval fails.
