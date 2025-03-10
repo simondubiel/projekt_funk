@@ -399,3 +399,123 @@ def test_get_weather_data_endpoint_valid(monkeypatch, client):
         date_val = pd.to_datetime(record["DATE"], unit="ms", errors="coerce")
         year = date_val.year if pd.notnull(date_val) else 1970
         assert year in [2020, 2021], f"Record year {year} is outside the filter range."
+
+    # --- Additional Tests to Increase Coverage ---
+
+def test_load_stations_failure(monkeypatch):
+    """Test that load_stations returns None if station data retrieval fails."""
+    def mock_requests_get(url, *args, **kwargs):
+        class MockResponse:
+            status_code = 404
+            text = ""
+        return MockResponse()
+    # Patch the requests.get used in the app module.
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    # Clear the cached stations.
+    app.cached_stations = None
+    stations_df = load_stations()
+    assert stations_df is None
+
+def test_load_stations_inventory_failure(monkeypatch):
+    """Test load_stations branch when inventory retrieval fails.
+    
+    In this case, station data should be returned unfiltered.
+    """
+    # Provide valid station data.
+    mock_station = (
+        "USW00094728"    # indices 0-10: ID (11 chars)
+        " "              # index 11 filler
+        " 40.783 "       # indices 12-19: LATITUDE (8 chars)
+        " "              # index 20 filler
+        "  -73.967"      # indices 21-29: LONGITUDE (9 chars)
+        " "              # index 30 filler
+        "  39.9"         # indices 31-36: ELEVATION (6 chars)
+        " "              # index 37 filler
+        "NY"             # indices 38-39: STATE (2 chars)
+        " "              # index 40 filler
+        "NEW YORK CITY CENTRAL PARK    "  # indices 41-70: NAME (30 chars)
+    )
+    def mock_requests_get(url, *args, **kwargs):
+        if "ghcnd-stations.txt" in url:
+            class MockResponse:
+                status_code = 200
+                text = mock_station
+            return MockResponse()
+        elif "ghcnd-inventory.txt" in url:
+            # Simulate failure for inventory retrieval.
+            class MockResponse:
+                status_code = 404
+                text = ""
+            return MockResponse()
+        else:
+            class MockResponse:
+                status_code = 404
+                text = ""
+            return MockResponse()
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    app.cached_stations = None
+    app.cached_inventory = None
+    stations_df = load_stations()
+    # Even though inventory failed, station data should be returned.
+    assert stations_df is not None
+    assert not stations_df.empty
+    assert stations_df.iloc[0]["ID"] == "USW00094728"
+
+def test_fetch_weather_data_dly_success(monkeypatch):
+    """Test that when CSV retrieval fails, a valid .dly record is parsed successfully."""
+    station_id = "USW00094728"
+    # Construct a minimal valid .dly line (269 characters).
+    # Components:
+    # - station_id: 11 chars ("USW00094728")
+    # - year: 4 chars ("2023")
+    # - month: 2 chars ("01")
+    # - element: 4 chars ("TMAX")
+    # - Day fields: day 1 value set to "   10" (5 chars) with filler to 8 chars, and days 2-31 as missing ("-9999" with filler).
+    station_id_str = station_id  # already 11 chars
+    year_str = "2023"
+    month_str = "01"
+    element = "TMAX"
+    day1 = "   10   "  # 8 chars (the first 5 characters represent the value, here 10)
+    missing_day = "-9999   "  # 8 chars for missing value
+    day_fields = day1 + missing_day * 30  # Total: 1 valid day + 30 missing days = 31*8 = 248 chars
+    dly_line = station_id_str + year_str + month_str + element + day_fields
+    assert len(dly_line) == 269, "The .dly line must be exactly 269 characters long."
+
+    def mock_requests_get(url, *args, **kwargs):
+        if "by_station" in url:
+            # Simulate CSV retrieval failure.
+            class MockResponse:
+                status_code = 404
+                text = ""
+            return MockResponse()
+        elif "all" in url:
+            # Return our valid .dly record.
+            class MockResponse:
+                status_code = 200
+                text = dly_line
+            return MockResponse()
+        else:
+            class MockResponse:
+                status_code = 404
+                text = ""
+            return MockResponse()
+
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    df = fetch_weather_data(station_id)
+    assert df is not None
+    # Expect one record from day 1.
+    assert len(df) == 1
+    record = df.iloc[0]
+    assert record["VALUE"] == 10
+    assert record["ELEMENT"] == "TMAX"
+    assert record["DATE"].year == 2023
+    assert record["DATE"].month == 1
+    assert record["DATE"].day == 1
+
+def test_parse_ghcnd_csv_from_string_exception(monkeypatch):
+    """Test that parse_ghcnd_csv_from_string returns an empty DataFrame on exception."""
+    def mock_read_csv(*args, **kwargs):
+        raise Exception("Test exception")
+    monkeypatch.setattr(pd, "read_csv", mock_read_csv)
+    df = parse_ghcnd_csv_from_string("invalid data")
+    assert df.empty    
