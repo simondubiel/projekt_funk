@@ -254,3 +254,75 @@ def test_preload_status(client):
     # The status should be either "loading" or "done" depending on preloading
     assert response.status_code == 200
     assert response.json["status"] in ["loading", "done"]    
+
+def test_get_stations_endpoint(monkeypatch, client):
+    # Create mock station and inventory data with proper fixed-width formatting.
+    mock_station = (
+        "USW00094728"    # ID: indices 0-10 (11 chars)
+        " "              # index 11 filler
+        " 40.783 "       # LATITUDE: indices 12-19 (8 chars)
+        " "              # index 20 filler
+        "  -73.967"      # LONGITUDE: indices 21-29 (9 chars)
+        " "              # index 30 filler
+        "  39.9"         # ELEVATION: indices 31-36 (6 chars)
+        " "              # index 37 filler
+        "NY"             # STATE: indices 38-39 (2 chars)
+        " "              # index 40 filler
+        "NEW YORK CITY CENTRAL PARK    "  # NAME: indices 41-70 (30 chars)
+    )
+    mock_inventory = (
+        "USW00094728"    
+        " "              
+        " 40.783 "       
+        " "              
+        "  -73.967"      
+        " "              
+        "TMIN"           
+        " "              
+        "1900"           
+        " "              
+        "2020"           
+        "\n"
+        "USW00094728"    
+        " "              
+        " 40.783 "       
+        " "              
+        "  -73.967"      
+        " "              
+        "TMAX"           
+        " "              
+        "1900"           
+        " "              
+        "2020"           
+        "\n"
+    )
+    
+    def mock_requests_get(url, *args, **kwargs):
+        # Return station data for the stations endpoint,
+        # inventory data for the inventory endpoint.
+        if "ghcnd-stations.txt" in url:
+            class MockResponse:
+                status_code = 200
+                text = mock_station
+            return MockResponse()
+        elif "ghcnd-inventory.txt" in url:
+            class MockResponse:
+                status_code = 200
+                text = mock_inventory
+            return MockResponse()
+        else:
+            # Fallback for other URLs.
+            class MockResponse:
+                status_code = 404
+                text = ""
+            return MockResponse()
+    
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    
+    # Now call the endpoint with parameters that match the mock data.
+    response = client.get("/get_stations?latitude=40.783&longitude=-73.967&radius_km=10&station_count=10&start_year=1900&end_year=2020")
+    assert response.status_code == 200
+    stations = response.get_json()
+    assert isinstance(stations, list)
+    # Ensure that the station is returned.
+    assert any(station["ID"] == "USW00094728" for station in stations)
