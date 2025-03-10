@@ -414,6 +414,7 @@ def test_load_stations_failure(monkeypatch):
         return MockResponse()
 
     monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setattr(pd, "read_fwf", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("fail")))
     stations_df = load_stations()
     assert stations_df is None
 
