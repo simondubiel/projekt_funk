@@ -28,8 +28,30 @@ def test_load_inventory(monkeypatch):
     """Test loading of inventory data."""
     # Example inventory data in fixed-width format (dummy values)
     mock_inventory = (
-        "USW00094728  40.783  -73.967  TMIN 1900 2020 \n"
-        "USW00094728  40.783  -73.967  TMAX 1900 2020 \n"
+        "USW00094728"    # indices 0-10: ID (11 chars)
+        " "              # index 11 filler
+        " 40.783 "       # indices 12-19: LATITUDE (8 chars; note the trailing space)
+        " "              # index 20 filler
+        "  -73.967"      # indices 21-29: LONGITUDE (9 chars)
+        " "              # index 30 filler
+        "TMIN"           # indices 31-34: ELEMENT (4 chars)
+        " "              # index 35 filler
+        "1900"           # indices 36-39: FIRSTYEAR (4 chars)
+        " "              # index 40 filler
+        "2020"           # indices 41-44: LASTYEAR (4 chars)
+        "\n"
+        "USW00094728"    
+        " "              
+        " 40.783 "       
+        " "              
+        "  -73.967"      
+        " "              
+        "TMAX"           
+        " "              
+        "1900"           
+        " "              
+        "2020"           
+        "\n"
     )
     def mock_requests_get(url, *args, **kwargs):
         class MockResponse:
