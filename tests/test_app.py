@@ -414,7 +414,7 @@ def test_load_stations_failure(monkeypatch):
     app.cached_stations = None
     app.cached_inventory = None
     stations_df = load_stations()
-    assert stations_df is None
+    assert stations_df.empty
 
 
 def test_load_stations_inventory_failure(monkeypatch):
