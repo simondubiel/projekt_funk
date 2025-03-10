@@ -150,14 +150,14 @@ USW00094728,20230102,TMIN,10,M,X,S,0700"""
     assert weather_data.iloc[1]["ELEMENT"] == "TMIN"
 
 
-# **Test für `parse_ghcn_csv_from_string()`**
-def test_parse_ghcn_csv_from_string():
+# **Test für `parse_ghcnd_csv_from_string()`**
+def test_parse_ghcnd_csv_from_string():
     """Testet das Parsen der NOAA CSV-Daten."""
     mock_data = """ID,DATE,ELEMENT,VALUE,M-FLAG,Q-FLAG,S-FLAG,OBS-TIME
 USW00094728,20230101,TMAX,30,M,X,S,0700
 USW00094728,20230102,TMIN,10,M,X,S,0700"""
 
-    df = parse_ghcn_csv_from_string(mock_data)
+    df = parse_ghcnd_csv_from_string(mock_data)
 
     assert not df.empty
     assert "DATE" in df.columns
@@ -205,10 +205,10 @@ def test_fetch_weather_data_request_failed(monkeypatch):
     assert weather_data is None
 
 
-# **Test für Fehlerbehandlung in `parse_ghcn_csv_from_string()`**
-def test_parse_ghcn_csv_from_string_empty():
+# **Test für Fehlerbehandlung in `parse_ghcnd_csv_from_string()`**
+def test_parse_ghcnd_csv_from_string_empty():
     """Testet das Parsen einer leeren CSV-Datei."""
-    df = parse_ghcn_csv_from_string("")
+    df = parse_ghcnd_csv_from_string("")
     assert df.empty
 
 
