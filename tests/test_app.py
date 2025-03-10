@@ -1,6 +1,7 @@
 import pytest
 import requests
 import pandas as pd
+import sys
 from app import (
     haversine,
     fetch_and_filter_stations,
@@ -413,7 +414,8 @@ def test_load_stations_failure(monkeypatch):
             text = ""
         return MockResponse()
 
-    monkeypatch.setattr(requests, "get", mock_requests_get)
+    monkeypatch.setitem(sys.modules["app"].__dict__, "requests", requests)
+    monkeypatch.setattr("app.requests.get", mock_requests_get)
     monkeypatch.setattr(pd, "read_fwf", lambda *args, **kwargs: (_ for _ in ()).throw(Exception("fail")))
     stations_df = load_stations()
     assert stations_df is None
