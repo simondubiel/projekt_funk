@@ -46,6 +46,7 @@ jobs:
           docker stop flask-app && docker rm flask-app
 
       - name: Test with Docker Compose
+        env: GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
           docker compose up -d
           sleep 10
