@@ -366,6 +366,22 @@ function processWeatherData(data) {
     .entries(tmaxData)
     .map(d => d.value);
   
+  const userEndYear = parseInt(getInputValue("end-year"));
+
+  seasonalTmin = seasonalTmin.filter(d => {
+    if (d.season === "Winter" && d.year > userEndYear) {
+      return false;
+    }
+    return true;
+  });
+  
+  seasonalTmax = seasonalTmax.filter(d => {
+    if (d.season === "Winter" && d.year > userEndYear) {
+      return false;
+    }
+    return true;
+  });
+
   let processedData = {
     annualTmin: annualTmin,
     annualTmax: annualTmax,
