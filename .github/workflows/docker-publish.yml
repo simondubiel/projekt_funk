@@ -47,7 +47,7 @@ jobs:
 
       - name: Test with Docker Compose
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 10
-          docker-compose ps
-          docker-compose down
+          docker compose ps
+          docker compose down
