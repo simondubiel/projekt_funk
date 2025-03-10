@@ -6,7 +6,7 @@ from app import (
     fetch_and_filter_stations,
     fetch_weather_data,
     load_stations,
-    parse_ghcn_csv_from_string,
+    parse_ghcnd_csv_from_string,
     parse_ghcnd_dly_from_string,
     app,
     load_inventory,
