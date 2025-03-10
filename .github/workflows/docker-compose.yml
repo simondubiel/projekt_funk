@@ -1,7 +1,7 @@
 version: '2.4'
 services:
   flask-app:
-    image: ghcr.io/your_owner/flask-app:latest
+    image: ghcr.io/${{ github.repository_owner }}/flask-app:latest
     ports:
       - "5000:5000"
     mem_limit: 999m
