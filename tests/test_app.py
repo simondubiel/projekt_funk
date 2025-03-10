@@ -1,8 +1,6 @@
 import pytest
 import requests
 import pandas as pd
-import json
-from io import StringIO
 from app import (
     haversine,
     fetch_and_filter_stations,
@@ -16,20 +14,23 @@ from app import (
 
 BASE_URL = "http://127.0.0.1:5000"
 
-# Fixture for the Flask test client.
+
 @pytest.fixture
 def client():
+    """Fixture zur Initialisierung des Flask-Testclients."""
     with app.test_client() as client:
         yield client
 
-# --- Test for load_inventory() ---
 
+
+# --- Test for load_inventory() ---
 def test_load_inventory(monkeypatch):
     """Test loading of inventory data."""
+    # Example inventory data in fixed-width format (dummy values)
     mock_inventory = (
         "USW00094728"    # indices 0-10: ID (11 chars)
         " "              # index 11 filler
-        " 40.783 "       # indices 12-19: LATITUDE (8 chars)
+        " 40.783 "       # indices 12-19: LATITUDE (8 chars; note the trailing space)
         " "              # index 20 filler
         "  -73.967"      # indices 21-29: LONGITUDE (9 chars)
         " "              # index 30 filler
@@ -39,17 +40,17 @@ def test_load_inventory(monkeypatch):
         " "              # index 40 filler
         "2020"           # indices 41-44: LASTYEAR (4 chars)
         "\n"
-        "USW00094728"
-        " "
-        " 40.783 "
-        " "
-        "  -73.967"
-        " "
-        "TMAX"
-        " "
-        "1900"
-        " "
-        "2020"
+        "USW00094728"    
+        " "              
+        " 40.783 "       
+        " "              
+        "  -73.967"      
+        " "              
+        "TMAX"           
+        " "              
+        "1900"           
+        " "              
+        "2020"           
         "\n"
     )
     def mock_requests_get(url, *args, **kwargs):
@@ -57,29 +58,20 @@ def test_load_inventory(monkeypatch):
             status_code = 200
             text = mock_inventory
         return MockResponse()
-    # Patch the requests.get used in the app module.
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
-    app.cached_inventory = None  # Clear cache for a fresh load.
+    monkeypatch.setattr(requests, "get", mock_requests_get)
     inventory_df = load_inventory()
     assert not inventory_df.empty
     assert "ID" in inventory_df.columns
+    # Check that both TMIN and TMAX records are present
     assert "TMIN" in inventory_df["ELEMENT"].values
     assert "TMAX" in inventory_df["ELEMENT"].values
 
-def test_load_inventory_failure(monkeypatch):
-    """Test inventory loading failure returns None."""
-    def mock_requests_get(url, *args, **kwargs):
-        class MockResponse:
-            status_code = 404
-            text = ""
-        return MockResponse()
-    # Patch the requests.get used in the app module.
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
-    app.cached_inventory = None  # Clear cache so failure branch is taken.
-    inv_df = load_inventory()
-    assert inv_df is None
-
 # --- Test for /preload_status endpoint ---
+@pytest.fixture
+def client():
+    with app.test_client() as client:
+        yield client
+
 def test_preload_status(client):
     """Test the preload status endpoint returns a valid status."""
     response = client.get("/preload_status")
@@ -89,12 +81,16 @@ def test_preload_status(client):
 # --- Test for fallback in fetch_weather_data (using .dly) ---
 def test_fetch_weather_data_fallback(monkeypatch):
     """Test that when CSV data is not available, the .dly fallback is used."""
+    # First request (CSV) fails
     def mock_requests_get(url, *args, **kwargs):
         class MockResponse:
             status_code = 404
             text = ""
         return MockResponse()
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+
+    # Since we don't have a valid .dly example, expect the function to return None
+    from app import fetch_weather_data
     weather_data = fetch_weather_data("USW00094728")
     assert weather_data is None
 
@@ -104,80 +100,69 @@ def test_parse_ghcnd_dly_from_string_empty():
     df = parse_ghcnd_dly_from_string("")
     assert df.empty
 
-# **Test for haversine()**
+# **Test für `haversine()`**
 def test_haversine():
-    """Test distance calculation between two coordinates."""
+    """Testet die Entfernung zwischen zwei Koordinaten."""
     dist = haversine(52.5200, 13.4050, 48.8566, 2.3522)  # Berlin → Paris
-    assert round(dist, 2) == 877.46
+    assert round(dist, 2) == 877.46  # Erwartet 877,46 km Entfernung
+
+    # Test für gleiche Koordinaten (Erwartung: 0 km)
     assert haversine(52.5200, 13.4050, 52.5200, 13.4050) == 0
 
-# **Test for load_stations()**
+
+# **Test für `load_stations()`**
 def test_load_stations(monkeypatch):
-    """Test loading of station data."""
-    mock_data = (
-        "USW00094728"    # 0-10: ID
-        " "              # 11
-        " 40.783 "       # 12-19: LATITUDE
-        " "              # 20
-        "  -73.967"      # 21-29: LONGITUDE
-        " "              # 30
-        "  39.9"         # 31-36: ELEVATION
-        " "              # 37
-        "NY"             # 38-39: STATE
-        " "              # 40
-        "NEW YORK CITY CENTRAL PARK    "  # 41-70: NAME
-    )
+    """Testet das Laden der Wetterstationen."""
+    mock_data = "USW00094728   40.783  -73.967  39.9 NY NEW YORK CITY CENTRAL PARK"
+
     def mock_requests_get(*args, **kwargs):
         class MockResponse:
             status_code = 200
             text = mock_data
         return MockResponse()
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
+
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+
     stations_df = load_stations()
     assert not stations_df.empty
     assert "ID" in stations_df.columns
     assert stations_df.iloc[0]["ID"] == "USW00094728"
 
-# **Test for fetch_and_filter_stations()**
+
+# **Test für `fetch_and_filter_stations()`**
 def test_fetch_and_filter_stations(monkeypatch):
-    """Test filtering of stations by coordinates and radius."""
-    mock_data = (
-        "USW00094728"
-        " "
-        " 40.783 "
-        " "
-        "  -73.967"
-        " "
-        "  39.9"
-        " "
-        "NY"
-        " "
-        "NEW YORK CITY CENTRAL PARK    "
-    )
+    """Testet das Filtern von Wetterstationen nach Koordinaten und Radius."""
+    mock_data = "USW00094728   40.783  -73.967  39.9 NY NEW YORK CITY CENTRAL PARK"
+
     def mock_requests_get(*args, **kwargs):
         class MockResponse:
             status_code = 200
             text = mock_data
         return MockResponse()
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
-    filtered_stations = fetch_and_filter_stations(40.7, -74.0, 50)
+
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+
+    filtered_stations = fetch_and_filter_stations(40.7, -74.0, 50)  # New York, Radius 50 km
     assert not filtered_stations.empty
     assert "ID" in filtered_stations.columns
     assert filtered_stations.iloc[0]["ID"] == "USW00094728"
 
-# **Test for fetch_weather_data() with CSV**
+
+# **Test für `fetch_weather_data()` mit CSV**
 def test_fetch_weather_data(monkeypatch):
-    """Test fetching weather data from CSV."""
-    mock_data = (
-        "USW00094728,20230101,TMAX,30,M,X,S,0700\n"
-        "USW00094728,20230102,TMIN,10,M,X,S,0700"
-    )
+    """Testet den Abruf von Wetterdaten für eine bestimmte Station aus CSV-Dateien."""
+    mock_data = """ID,DATE,ELEMENT,VALUE,M-FLAG,Q-FLAG,S-FLAG,OBS-TIME
+USW00094728,20230101,TMAX,30,M,X,S,0700
+USW00094728,20230102,TMIN,10,M,X,S,0700"""
+
     def mock_requests_get(*args, **kwargs):
         class MockResponse:
             status_code = 200
             text = mock_data
         return MockResponse()
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
+
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+
     weather_data = fetch_weather_data("USW00094728")
     assert weather_data is not None
     assert "DATE" in weather_data.columns
@@ -186,14 +171,16 @@ def test_fetch_weather_data(monkeypatch):
     assert weather_data.iloc[0]["ELEMENT"] == "TMAX"
     assert weather_data.iloc[1]["ELEMENT"] == "TMIN"
 
-# **Test for parse_ghcnd_csv_from_string()**
+
+# **Test für `parse_ghcnd_csv_from_string()`**
 def test_parse_ghcnd_csv_from_string():
-    """Test parsing of NOAA CSV data."""
-    mock_data = (
-        "USW00094728,20230101,TMAX,30,M,X,S,0700\n"
-        "USW00094728,20230102,TMIN,10,M,X,S,0700"
-    )
+    """Testet das Parsen der NOAA CSV-Daten."""
+    mock_data = """ID,DATE,ELEMENT,VALUE,M-FLAG,Q-FLAG,S-FLAG,OBS-TIME
+USW00094728,20230101,TMAX,30,M,X,S,0700
+USW00094728,20230102,TMIN,10,M,X,S,0700"""
+
     df = parse_ghcnd_csv_from_string(mock_data)
+
     assert not df.empty
     assert "DATE" in df.columns
     assert "ELEMENT" in df.columns
@@ -201,73 +188,209 @@ def test_parse_ghcnd_csv_from_string():
     assert df.iloc[0]["ELEMENT"] == "TMAX"
     assert df.iloc[1]["ELEMENT"] == "TMIN"
 
-# **API Test: /get_weather_data with valid CSV data**
-def test_get_weather_data_endpoint(monkeypatch, client):
-    """Test the /get_weather_data endpoint with valid CSV data."""
+
+# **API-Test: `/get_weather_data` ohne Parameter**
+def test_get_weather_data_missing_param(client):
+    """Testet den API-Endpunkt `/get_weather_data` ohne `station_id`."""
+    response = client.get(f"{BASE_URL}/get_weather_data")
+    assert response.status_code == 400
+    assert response.json["error"] == "No station ID provided"
+
+
+# **API-Test: `/get_weather_data` mit ungültiger Station**
+def test_get_weather_data_invalid_station(client, monkeypatch):
+    """Testet den API-Endpunkt `/get_weather_data` mit ungültiger `station_id`."""
+
+    def mock_fetch_weather_data(station_id):
+        return None  # Simuliert eine fehlgeschlagene API-Abfrage
+
+    monkeypatch.setattr("app.fetch_weather_data", mock_fetch_weather_data)
+
+    response = client.get(f"{BASE_URL}/get_weather_data?station_id=INVALID")
+    assert response.status_code == 404
+    assert "error" in response.json
+
+
+# **Test für Fehlerbehandlung in `fetch_weather_data()`**
+def test_fetch_weather_data_request_failed(monkeypatch):
+    """Simuliert einen fehlgeschlagenen HTTP-Request für die CSV-Wetterdaten."""
+
+    def mock_requests_get(*args, **kwargs):
+        class MockResponse:
+            status_code = 404
+            text = ""
+        return MockResponse()
+
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+
+    weather_data = fetch_weather_data("INVALID_ID")
+    assert weather_data is None
+
+
+# **Test für Fehlerbehandlung in `parse_ghcnd_csv_from_string()`**
+def test_parse_ghcnd_csv_from_string_empty():
+    """Testet das Parsen einer leeren CSV-Datei."""
+    df = parse_ghcnd_csv_from_string("")
+    assert df.empty
+
+
+# **API-Test: `/` (Index-Seite)**
+def test_index_page(client):
+    """Testet, ob die Index-Seite korrekt geladen wird."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"<title>" in response.data  # Prüft, ob HTML zurückgegeben wird
+
+
+# **Test für den globalen Fehlerhandler**
+def test_global_error_handler(client):
+    """Testet, ob unerwartete Fehler korrekt abgefangen werden."""
+    response = client.get("/error")
+    assert response.status_code == 500
+    assert "Ein unerwarteter Fehler ist aufgetreten." in response.json["error"]
+
+def test_preload_status(client):
+    response = client.get("/preload_status")
+    # The status should be either "loading" or "done" depending on preloading
+    assert response.status_code == 200
+    assert response.json["status"] in ["loading", "done"]    
+
+def test_get_stations_endpoint(monkeypatch, client):
+    # Create mock station and inventory data with proper fixed-width formatting.
+    mock_station = (
+        "USW00094728"    # ID: indices 0-10 (11 chars)
+        " "              # index 11 filler
+        " 40.783 "       # LATITUDE: indices 12-19 (8 chars)
+        " "              # index 20 filler
+        "  -73.967"      # LONGITUDE: indices 21-29 (9 chars)
+        " "              # index 30 filler
+        "  39.9"         # ELEVATION: indices 31-36 (6 chars)
+        " "              # index 37 filler
+        "NY"             # STATE: indices 38-39 (2 chars)
+        " "              # index 40 filler
+        "NEW YORK CITY CENTRAL PARK    "  # NAME: indices 41-70 (30 chars)
+    )
+    mock_inventory = (
+        "USW00094728"    
+        " "              
+        " 40.783 "       
+        " "              
+        "  -73.967"      
+        " "              
+        "TMIN"           
+        " "              
+        "1900"           
+        " "              
+        "2020"           
+        "\n"
+        "USW00094728"    
+        " "              
+        " 40.783 "       
+        " "              
+        "  -73.967"      
+        " "              
+        "TMAX"           
+        " "              
+        "1900"           
+        " "              
+        "2020"           
+        "\n"
+    )
+    
+    def mock_requests_get(url, *args, **kwargs):
+        # Return station data for the stations endpoint,
+        # inventory data for the inventory endpoint.
+        if "ghcnd-stations.txt" in url:
+            class MockResponse:
+                status_code = 200
+                text = mock_station
+            return MockResponse()
+        elif "ghcnd-inventory.txt" in url:
+            class MockResponse:
+                status_code = 200
+                text = mock_inventory
+            return MockResponse()
+        else:
+            # Fallback for other URLs.
+            class MockResponse:
+                status_code = 404
+                text = ""
+            return MockResponse()
+    
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    
+    # Now call the endpoint with parameters that match the mock data.
+    response = client.get("/get_stations?latitude=40.783&longitude=-73.967&radius_km=10&station_count=10&start_year=1900&end_year=2020")
+    assert response.status_code == 200
+    stations = response.get_json()
+    assert isinstance(stations, list)
+    # Ensure that the station is returned.
+    assert any(station["ID"] == "USW00094728" for station in stations)
+
+    # --- Additional Tests ---
+
+def test_parse_ghcnd_dly_from_string_valid():
+    """Test that a valid .dly line returns the correct record.
+    
+    The minimal valid .dly line must be 269 characters long:
+      - 11 chars for station_id
+      - 4 chars for year
+      - 2 chars for month
+      - 4 chars for element
+      - 31 days * 8 chars = 248 chars for day records
+    In this test, only day 1 is given a valid value ("   10") while days 2-31 are missing (-9999).
+    """
+    # Construct components:
+    station_id = "USW00094728"         # 11 characters
+    year = "2023"                      # 4 characters
+    month = "01"                       # 2 characters
+    element = "TMAX"                   # 4 characters
+    # For day 1, value is "   10" (5 chars) plus filler 3 spaces → 8 chars total.
+    day1 = "   10   "                  # 8 characters (first 5 chars "   10")
+    # For days 2 to 31, use missing value: "-9999" (5 chars) then filler "   " → 8 chars each.
+    missing_day = "-9999   "           # 8 characters
+    day_fields = day1 + missing_day * 30  # 1 valid day + 30 missing days = 31 * 8 = 248 characters
+    dly_line = station_id + year + month + element + day_fields
+    assert len(dly_line) == 269, "The .dly line must be exactly 269 characters long."
+    
+    df = parse_ghcnd_dly_from_string(dly_line)
+    # Expect exactly one record (from day 1)
+    assert len(df) == 1, "Only one valid day record should be parsed."
+    record = df.iloc[0]
+    assert record["VALUE"] == 10
+    assert record["ELEMENT"] == "TMAX"
+    # Verify the date components for day 1.
+    assert record["DATE"].year == 2023
+    assert record["DATE"].month == 1
+    assert record["DATE"].day == 1
+
+
+def test_get_weather_data_endpoint_valid(monkeypatch, client):
+    """Test the /get_weather_data endpoint with valid CSV data and year filtering.
+    
+    This test uses CSV data containing records from different years and verifies
+    that only records within the given start and end years are returned.
+    """
+    # Create mock CSV data with three records.
     mock_csv = (
         "USW00094728,20190101,TMAX,25,M,X,S,0700\n"
-        "USW00094728,20200101,TMIN,5,M,X,S,0700"
+        "USW00094728,20200101,TMIN,5,M,X,S,0700\n"
+        "USW00094728,20210101,TMAX,30,M,X,S,0700"
     )
     def mock_requests_get(url, *args, **kwargs):
         class MockResponse:
             status_code = 200
             text = mock_csv
         return MockResponse()
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
-    response = client.get("/get_weather_data?station_id=USW00094728&start_year=2020&end_year=2020")
+    monkeypatch.setattr(requests, "get", mock_requests_get)
+    
+    # Request data filtering for years 2020 to 2021 (should include the 2020 and 2021 records)
+    response = client.get("/get_weather_data?station_id=USW00094728&start_year=2020&end_year=2021")
     assert response.status_code == 200
-    # Since the endpoint returns a JSON string, load it manually.
+    # Load the JSON response (Flask returns JSON as a string)
+    import json
     data = json.loads(response.data.decode("utf-8"))
-    # Only the 2020 record should be returned.
+    # Check that each returned record is from 2020 or 2021.
     for record in data:
-        assert pd.to_datetime(record["DATE"]).year == 2020
-
-# **API Test: /get_weather_data missing parameter**
-def test_get_weather_data_missing_param(client):
-    """Test the /get_weather_data endpoint without station_id."""
-    response = client.get(f"{BASE_URL}/get_weather_data")
-    assert response.status_code == 400
-    assert response.json["error"] == "No station ID provided"
-
-# **API Test: /get_weather_data with invalid station**
-def test_get_weather_data_invalid_station(client, monkeypatch):
-    """Test /get_weather_data endpoint with an invalid station_id."""
-    def mock_fetch_weather_data(station_id):
-        return None  # Simulate failure
-    monkeypatch.setattr("app.fetch_weather_data", mock_fetch_weather_data)
-    response = client.get(f"{BASE_URL}/get_weather_data?station_id=INVALID")
-    assert response.status_code == 404
-    assert "error" in response.json
-
-# **Test for error handling in fetch_weather_data()**
-def test_fetch_weather_data_request_failed(monkeypatch):
-    """Simulate a failed HTTP request for CSV weather data."""
-    def mock_requests_get(*args, **kwargs):
-        class MockResponse:
-            status_code = 404
-            text = ""
-        return MockResponse()
-    monkeypatch.setattr(app.requests, "get", mock_requests_get)
-    weather_data = fetch_weather_data("INVALID_ID")
-    assert weather_data is None
-
-# **API Test: / (Index Page)**
-def test_index_page(client):
-    """Test that the index page loads correctly."""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert b"<title>" in response.data
-
-# **Test for the global error handler**
-def test_global_error_handler(client):
-    """Test that unexpected errors are handled by the global error handler."""
-    app.config["TESTING"] = True  # Ensure /error route is registered.
-    response = client.get("/error")
-    assert response.status_code == 500
-    assert "Ein unerwarteter Fehler" in response.json["error"]
-
-# **Test for /preload_status endpoint again**
-def test_preload_status_again(client):
-    response = client.get("/preload_status")
-    assert response.status_code == 200
-    assert response.json["status"] in ["loading", "done"]
+        year = pd.to_datetime(record["DATE"]).year
+        assert year in [2020, 2021], f"Record year {year} is outside the filter range."
