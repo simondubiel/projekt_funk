@@ -14,7 +14,7 @@ COPY . .
 # Flask-Umgebungsvariablen setzen
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=production
-ENV PORT=5000
+ENV PORT=8080
 
 # Flask mit Gunicorn starten
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]

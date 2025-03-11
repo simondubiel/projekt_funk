@@ -339,7 +339,10 @@ function processWeatherData(data) {
   function getSeasonYear(date) {
     let year = date.getFullYear();
     let month = date.getMonth() + 1;
-    return month === 12 ? year + 1 : year;
+    if (latitude_positive && month === 12) {
+      return year + 1;
+    }
+    return year;
   }
   
   let seasonalTmin = d3.nest()
