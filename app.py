@@ -273,6 +273,22 @@ if app.config.get("TESTING"):
     def error():
         raise Exception("Simulierter Fehler")
 
+preload_started = False
+
+@app.before_request
+def start_background_preload_once():
+    global preload_started, preloading_complete
+    if not preload_started:
+        preload_started = True
+        def background_load():
+            global preloading_complete
+            print("Preloading station and inventory data...")
+            load_stations()
+            load_inventory()
+            preloading_complete = True
+            print("Preloading complete.")
+        threading.Thread(target=background_load, daemon=True).start()
+
 if __name__ == "__main__":
     # Starte einen Hintergrund-Thread zum Laden der Stations- und Inventory-Daten einmalig beim App-Start.
     def background_load():
@@ -283,10 +299,6 @@ if __name__ == "__main__":
         preloading_complete = True
         print("Preloading complete.")
 
-    thread = threading.Thread(target=background_load)
-    thread.daemon = True
-    thread.start()
-
     print("Starting the app.")
-    app.run(debug=True)
+    app.run(debug=False)
 
