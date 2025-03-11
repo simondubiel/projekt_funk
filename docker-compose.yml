@@ -1,7 +1,7 @@
-version: '2.4'
+version: '3.8'
 services:
   flask-app:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/flask-app:latest  
+    image: ghcr.io/simondubiel/flask-app:latest  
     ports:
       - "8080:8080"
-    mem_limit: 999m
+    restart: unless-stopped
