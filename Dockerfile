@@ -17,4 +17,4 @@ ENV FLASK_ENV=production
 ENV PORT=8080
 
 # Flask mit Gunicorn starten
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:8080", "app:app"]
