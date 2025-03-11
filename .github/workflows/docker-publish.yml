@@ -29,10 +29,10 @@ jobs:
 
       - name: Test Docker Container
         run: |
-          container_id=$(docker run -d --name flask-app -p 5000:5000 ghcr.io/${{ github.repository_owner }}/flask-app:latest)
+          container_id=$(docker run -d --name flask-app -p 8080:8080 ghcr.io/${{ github.repository_owner }}/flask-app:latest)
           retries=0
           max_retries=10
-          until [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5000/)" -eq 200 ]; do
+          until [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" -eq 200 ]; do
             echo "Waiting for container to start..."
             sleep 3
             retries=$((retries+1))
