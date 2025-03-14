@@ -9,7 +9,7 @@
 **Code-Erläuterung:** [Code-Erläuterung](users_guide/Code-Dokumentation.pdf)
 
 
-# Projektstruktur und Dateibeschreibungen (Deutsch)
+# Projektstruktur und Dateibeschreibungen
 
 Unten findest du eine strukturierte Übersicht aller Ordner und Dateien in diesem Repository – auf Deutsch. Du kannst den Text gerne für deine README anpassen oder neu formatieren.
 
