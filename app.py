@@ -6,7 +6,6 @@ from io import StringIO
 from math import radians, cos, sin, sqrt, atan2
 import threading
 
-# Basis-URL für die GHCN-Daily-Daten
 GHCN_BASE_URL = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/"
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -55,15 +54,12 @@ def load_stations():
         df_stations["STATE"] = df_stations["STATE"].fillna("unknown")
         print("Station data loaded successfully.")
         
-        # Filter stations that provide TMIN and TMAX data using inventory information.
         inventory_df = load_inventory()
         if inventory_df is None:
             print("Failed to load inventory data. Returning station data without filtering.")
             cached_stations = df_stations
         else:
-            # Select inventory rows with TMIN or TMAX.
             valid_inventory = inventory_df[inventory_df['ELEMENT'].isin(['TMIN', 'TMAX'])]
-            # Group by station ID and keep only those that have both TMIN and TMAX.
             valid_station_ids = valid_inventory.groupby('ID')['ELEMENT'].nunique()
             valid_station_ids = valid_station_ids[valid_station_ids == 2].index.tolist()
             df_stations = df_stations[df_stations['ID'].isin(valid_station_ids)]
@@ -74,7 +70,6 @@ def load_stations():
 def load_inventory():
     global cached_inventory
     if cached_inventory is not None:
-        # Inventory already loaded; return cached version.
         return cached_inventory
 
     print("Loading inventory data from NOAA...")
@@ -84,7 +79,6 @@ def load_inventory():
         print("Failed to load inventory data. HTTP status code:", response.status_code)
         return None
     inventory_data = response.text
-    # Using the column specs as described in your README
     colspecs = [(0, 11), (12, 20), (21, 30), (31, 35), (36, 40), (41, 45)]
     columns = ['ID', 'LATITUDE', 'LONGITUDE', 'ELEMENT', 'FIRSTYEAR', 'LASTYEAR']
     cached_inventory = pd.read_fwf(StringIO(inventory_data), colspecs=colspecs, names=columns)
@@ -100,9 +94,6 @@ def fetch_and_filter_stations(lat, lon, radius_km):
         lambda row: haversine(lat, lon, row['LATITUDE'], row['LONGITUDE']), axis=1
     )
     return stations_df[stations_df["DISTANCE"] <= radius_km].sort_values(by="DISTANCE")
-
-# ------------------------------
-# Parsing and weather data fetching functions
 
 def parse_ghcnd_csv_from_string(data):
     """
@@ -130,7 +121,7 @@ def parse_ghcnd_dly_from_string(data):
     records = []
     lines = data.splitlines()
     for line in lines:
-        if len(line) < 269:  # Zeile zu kurz? -> überspringen
+        if len(line) < 269:
             continue
         station_id = line[0:11]
         try:
@@ -139,7 +130,6 @@ def parse_ghcnd_dly_from_string(data):
         except:
             continue
         element = line[17:21]
-        # Für jeden Tag des Monats
         for day in range(1, 32):
             start_index = 21 + (day - 1) * 8
             end_index = start_index + 5
@@ -183,9 +173,6 @@ def fetch_weather_data(station_id):
             print(f"Failed to fetch weather data for station {station_id} from both CSV and .dly sources. HTTP status for .dly: {response2.status_code}")
             return None
 
-# ------------------------------
-# Modified /get_stations endpoint with inventory filtering
-
 @app.route('/get_stations', methods=['GET'])
 def get_stations():
     try:
@@ -199,25 +186,27 @@ def get_stations():
         print("Invalid parameters for get_stations request:", e)
         return jsonify({"error": "Invalid parameters"}), 400
 
-    # Get stations by spatial filtering.
     stations_df = fetch_and_filter_stations(latitude, longitude, radius_km)
     if stations_df is None or stations_df.empty:
          return jsonify([])
 
-    # Load inventory and filter for TMIN/TMAX records overlapping the desired time span.
     inventory_df = load_inventory()
     if inventory_df is None or inventory_df.empty:
          print("No inventory data available")
          return jsonify([])
 
-    valid_inventory = inventory_df[
-         (inventory_df['ELEMENT'].isin(['TMIN', 'TMAX'])) &
-         (inventory_df['FIRSTYEAR'].astype(int) <= start_year) &
-         (inventory_df['LASTYEAR'].astype(int) >= end_year)
+    valid_inventory_tmin = inventory_df[
+        (inventory_df['ELEMENT'] == 'TMIN') &
+        (inventory_df['FIRSTYEAR'].astype(int) <= start_year) &
+        (inventory_df['LASTYEAR'].astype(int) >= end_year)
     ]
-    valid_station_ids = valid_inventory['ID'].unique()
+    valid_inventory_tmax = inventory_df[
+        (inventory_df['ELEMENT'] == 'TMAX') &
+        (inventory_df['FIRSTYEAR'].astype(int) <= start_year) &
+        (inventory_df['LASTYEAR'].astype(int) >= end_year)
+    ]
+    valid_station_ids = set(valid_inventory_tmin['ID']).intersection(set(valid_inventory_tmax['ID']))
 
-    # Keep only stations that are in the valid inventory.
     stations_df = stations_df[stations_df['ID'].isin(valid_station_ids)]
     stations_df = stations_df.head(station_count)
     stations = stations_df.to_dict(orient="records")
@@ -243,12 +232,10 @@ def get_weather_data():
         print(f"No weather data found for station {station_id}.")
         return jsonify({"error": f"No data found for station {station_id}"}), 404
 
-    # Logge den Gesamtzeitraum der verfügbaren Daten
     min_date = weather_data["DATE"].min()
     max_date = weather_data["DATE"].max()
     print(f"Weather data available for station {station_id} from {min_date} to {max_date}.")
 
-    # Falls Start- und Endjahr angegeben sind, filtere die Daten lokal
     if start_year and end_year:
         try:
             start_year_int = int(start_year)
@@ -290,7 +277,6 @@ def start_background_preload_once():
         threading.Thread(target=background_load, daemon=True).start()
 
 if __name__ == "__main__":
-    # Starte einen Hintergrund-Thread zum Laden der Stations- und Inventory-Daten einmalig beim App-Start.
     def background_load():
         global preloading_complete
         print("Preloading station and inventory data...")
