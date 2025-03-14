@@ -1,4 +1,4 @@
-/* Allgemeines Styling */
+
 body {
   margin: 0;
   padding: 0;
@@ -7,7 +7,7 @@ body {
   background-size: cover;
 }
 
-/* Ensure all elements use border-box sizing */
+
 *,
 *::before,
 *::after {
@@ -18,7 +18,7 @@ body {
   font-size: 20px;
   font-weight: bold;
 }
-/* Container Styling */
+
 .container {
   background: rgba(255, 255, 255, 0.8);
   border-radius: 15px;
@@ -35,7 +35,7 @@ body {
   text-align: center;
 }
 
-/* Grid-Layout */
+
 .grid-layout {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -43,7 +43,7 @@ body {
   padding: 20px;
 }
 
-/* Buttons */
+
 .button {
   background-color: rgb(54, 150, 213);
   color: white;
@@ -60,22 +60,22 @@ body {
   background-color: rgb(30, 130, 200);
 }
 
-/* Dropdown-Menüs */
+
 .dropdown-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center; /* Horizontale Zentrierung */
-  justify-content: center; /* Vertikale Zentrierung */
-  width: 100%; /* Passt sich an Containerbreite an */
+  align-items: center; 
+  justify-content: center; 
+  width: 100%; 
   position: relative;
-  margin: 0 auto; /* Zentriert das Dropdown-Menü */
+  margin: 0 auto; 
 }
 
 .dropdown-input {
-  width: 100%; /* Nutzt die gesamte Breite des Wrappers */
+  width: 100%; 
   height: 20px;
   font-size: 14px;
-  padding-right: 25px; /* Platz für den Button schaffen */
+  padding-right: 25px; 
   text-align: center;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -83,40 +83,39 @@ body {
 
 .dropdown-btn {
   position: absolute;
-  top: 0; /* Direkt an den oberen Rand setzen */
-  right: 0; /* Direkt an den rechten Rand setzen */
-  height: 100%; /* Gleiche Höhe wie das Input-Feld */
-  padding: 0; /* Kein zusätzlicher Abstand */
-  margin: 0; /* Kein zusätzlicher Abstand */
-  width: 5%; /* Breite des Buttons */
+  top: 0; 
+  right: 0; 
+  height: 100%; 
+  padding: 0; 
+  margin: 0; 
+  width: 5%; 
   min-width: 20px;
-  overflow-y: auto; /* Scrollbar bei Bedarf anzeigen */
+  overflow-y: auto; 
   background: transparent;
   border: 1px solid #ccc;
   border-radius: 5px;
   list-style: none;
-  z-index: 1000; /* Stellt sicher, dass das Dropdown-Menü über anderen Elementen liegt */
+  z-index: 1000; 
   cursor: pointer;
   font-size: 14px;
 }
 
 .dropdown-list {
   position: absolute;
-  top: 100%; /* Direkt unter das Eingabefeld setzen */
+  top: 100%; 
   left: 0;
-  width: 100%; /* Gleiche Breite wie das Input-Feld */
-  max-width: 100%; /* Maximale Breite */
-  box-sizing: border-box; /* Inkludiert Padding und Border in die Breite */
+  width: 100%;
+  max-width: 100%; 
+  box-sizing: border-box; 
   background: white;
   border: 1px solid #ccc;
   border-radius: 5px;
   display: none;
   list-style: none;
   padding: 0;
-  margin-top: 2px; /* Kleiner Abstand für bessere Lesbarkeit */
-  z-index: 1000; /* Stellt sicher
-  dass das Dropdown-Menü über anderen Elementen liegt */
-  overflow: hidden; /* Versteckt überstehende Elemente */
+  margin-top: 2px; 
+  z-index: 1000; 
+  overflow: hidden; 
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -132,14 +131,13 @@ body {
   color: white;
 }
 
-/* Media query for smaller screens, if needed */
+
 @media (max-width: 600px) {
   .dropdown-wrapper {
     max-width: 100%;
   }
 }
 
-/* Karte */
 .large-container {
   grid-column: span 2;
   display: flex;
@@ -149,12 +147,12 @@ body {
 }
 
 #map {
-  width: calc(100% - 20px); /* Abstand links und rechts */
-  height: calc(100% - 20px); /* Abstand oben und unten */
-  margin: 10px; /* Sorgt für den gleichmäßigen Abstand */
+  width: calc(100% - 20px); 
+  height: calc(100% - 20px); 
+  margin: 10px; 
 }
 
-/* Rechte Seitencontainer */
+
 .right-containers {
   display: flex;
   flex-direction: column;
@@ -163,21 +161,21 @@ body {
 }
 
 .small-container {
-  height: auto; /* Passt sich dem Inhalt an */
+  height: auto; 
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
 
-/* Vollbreite Container */
+
 .full-width-container {
   grid-column: span 4;
   height: auto;
   max-height: 550px;
 }
 
-/* Datumseingabe */
+
 .date-container {
   display: flex;
   gap: 10px;
@@ -196,7 +194,7 @@ body {
   text-align: center;
 }
 
-/* Eingabefelder */
+
 .input-field {
   width: 150px;
   padding: 5px;
@@ -207,7 +205,7 @@ body {
   font-size: 14px;
 }
 
-/* Tabellen */
+
 .table-container {
   width: 100%;
   max-height: 150px;
@@ -236,27 +234,27 @@ th {
   color: white;
 }
 
-/* Markierte Zeile */
+
 .selected {
   background-color: rgba(54, 150, 213, 0.5) !important;
   color: white;
   font-weight: bold;
 }
 
-/* Höhere Container für bessere Lesbarkeit */
+
 .grid-layout > .container:nth-child(1),
 .grid-layout > .container:nth-child(2),
 .grid-layout > .container:nth-child(3),
 .grid-layout > .container:nth-child(4) {
-    height: 60px; /* Erhöht die Höhe */
+    height: 60px; 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 10px; /* Etwas mehr Padding für bessere Lesbarkeit */
+    padding: 10px; 
 }
 
-/* Überschriften ohne extra Abstand */
+
 .grid-layout > .container h3 {
     margin: 0;
     padding: 0;
@@ -264,32 +262,32 @@ th {
     font-size: 14px;
 }
 
-/* Zentriert den Text im Container */
+
 .grid-layout > .container p {
     margin: 0;
     padding: 0;
     text-align: center;
 }
 
-/* Tabellenzeilen klickbar machen */
+
 tbody tr {
   cursor: pointer;
   transition: background 0.3s ease-in-out;
 }
 
-/* Hover-Effekt */
+
 tbody tr:hover {
   background-color: rgba(54, 150, 213, 0.2);
 }
 
-/* Nach Klick farblich hinterlegen */
+
 tbody tr.selected {
   background-color: rgba(54, 150, 213, 0.5) !important;
   color: white;
   font-weight: bold;
 }
 
-/* Responsives Design */
+
 @media (max-width: 1024px) {
   .grid-layout {
       grid-template-columns: repeat(2, 1fr);
@@ -318,16 +316,16 @@ tbody tr.selected {
   flex: 0 0 auto;
 }
 
-/* Achsen-Styling: Linien und Texte */
+
 .axis path,
 .axis line {
-  stroke: gray;         /* Farbe der Achsenlinien */
-  stroke-width: 1.5px;      /* Dicke der Linien */
+  stroke: gray;         
+  stroke-width: 1.5px;      
 }
 
 .axis text {
-  fill: gray;         /* Farbe der Achsenbeschriftungen */
-  font-size: 14px;        /* Schriftgröße der Tick-Beschriftungen */
+  fill: gray;         
+  font-size: 14px;       
 }
 
 #chart-legend:empty {
@@ -350,23 +348,22 @@ tbody tr.selected {
   flex-shrink: 0;
 }
 
-/* Make the SVG itself scale within its container */
+
 .svg-content-responsive {
   width: 100%;
   height: auto;
   display: block;
 }
 
-/* Legend item container */
 .legend-item {
   display: flex;
-  align-items: center;   /* vertically center dot and text */
+  align-items: center;   
   cursor: pointer;
   margin-bottom: 5px;
   white-space: nowrap;
 }
 
-/* The colored dot */
+
 .legend-dot {
   display: inline-block;
   width: 16px;
@@ -375,24 +372,24 @@ tbody tr.selected {
   vertical-align: middle;
 }
 
-/* The legend text */
+
 .legend-text {
-  margin-left: 15px;  /* 15px gap after the dot */
+  margin-left: 15px;  
   vertical-align: middle;
 }
 
 #loading-overlay {
-  position: fixed;      /* Stays fixed over the whole page */
+  position: fixed;      
   top: 0;
   left: 0;
-  width: 100vw;         /* Full viewport width */
-  height: 100vh;        /* Full viewport height */
-  display: flex;        /* Use flexbox to center the spinner */
+  width: 100vw;        
+  height: 100vh;        
+  display: flex;        
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(211, 211, 211, 0.3);  /* Light gray, slightly transparent */
-  z-index: 1000;        /* Ensure it stays on top */
+  background: rgba(211, 211, 211, 0.3);  
+  z-index: 1000;     
 }
 
 section.wrapper {

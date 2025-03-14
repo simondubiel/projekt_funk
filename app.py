@@ -28,7 +28,7 @@ def index():
     return render_template("index.html", station_count=station_count)
 
 def haversine(lat1, lon1, lat2, lon2):
-    """Berechnet die Entfernung zwischen zwei Punkten auf der Erde in km."""
+
     R = 6371.0
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
@@ -96,9 +96,7 @@ def fetch_and_filter_stations(lat, lon, radius_km):
     return stations_df[stations_df["DISTANCE"] <= radius_km].sort_values(by="DISTANCE")
 
 def parse_ghcnd_csv_from_string(data):
-    """
-    Parst die CSV-Daten (by_station) in ein Pandas DataFrame.
-    """
+
     col_names = ["ID", "DATE", "ELEMENT", "VALUE", "M-FLAG", "Q-FLAG", "S-FLAG", "OBS-TIME"]
     try:
         df = pd.read_csv(StringIO(data), names=col_names, dtype=str)
@@ -113,11 +111,7 @@ def parse_ghcnd_csv_from_string(data):
     return df[["DATE", "ELEMENT", "VALUE"]]
 
 def parse_ghcnd_dly_from_string(data):
-    """
-    Parst die .dly-Daten (monatsweise fixe Breiten) in ein Pandas DataFrame.
-    Jede Zeile enthält einen Monat. Es werden für jeden Tag (1-31) die Werte extrahiert.
-    Fehlende Werte (d.h. -9999) werden ignoriert.
-    """
+
     records = []
     lines = data.splitlines()
     for line in lines:
@@ -149,11 +143,7 @@ def parse_ghcnd_dly_from_string(data):
     return df
 
 def fetch_weather_data(station_id):
-    """
-    Versucht, alle verfügbaren Wetterdaten für die Station abzurufen.
-    Zuerst wird versucht, die CSV-Version aus by_station zu laden.
-    Scheitert das, wird als Fallback die .dly-Datei aus dem "all"-Verzeichnis abgerufen.
-    """
+
     print(f"Fetching weather data for station {station_id} (CSV)...")
     csv_url = f"{GHCN_BASE_URL}by_station/{station_id}.csv"
     response = requests.get(csv_url)
@@ -215,11 +205,7 @@ def get_stations():
 
 @app.route('/get_weather_data', methods=['GET'])
 def get_weather_data():
-    """
-    Ruft alle verfügbaren Wetterdaten für die angegebene Station ab.
-    Anschließend wird lokal ermittelt, von wann bis wann Daten vorhanden sind.
-    Es werden nur die Daten zurückgegeben, die im angegebenen Zeitraum liegen.
-    """
+
     station_id = request.args.get('station_id')
     start_year = request.args.get('start_year')
     end_year = request.args.get('end_year')

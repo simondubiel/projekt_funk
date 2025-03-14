@@ -23,14 +23,14 @@ map.on('click', function(e) {
   let tableBody = document.getElementById("station-table");
   let updateCoordinates = false;
   
-  // If no stations are listed, update coordinates.
+ 
   if (!tableBody || tableBody.childElementCount === 0 ||
       (tableBody.childElementCount === 1 && tableBody.innerText.trim().includes("Keine Stationen verfügbar"))) {
     updateCoordinates = true;
   } else if (radiusCircle) {
-    // If stations are listed, update coordinates only when clicking outside the circle.
+    
     let circleCenter = radiusCircle.getLatLng();
-    let distanceFromCenter = circleCenter.distanceTo(e.latlng); // distance in meters
+    let distanceFromCenter = circleCenter.distanceTo(e.latlng); 
     if (distanceFromCenter > radiusCircle.getRadius()) {
       updateCoordinates = true;
     }
@@ -196,7 +196,7 @@ async function fetchStationData() {
     return;
   }
 
-  // Request many stations; server-side filtering will return only those that have valid inventory.
+  
   let queryParams = `?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&radius_km=${encodeURIComponent(radiusKm)}&station_count=9999&start_year=${encodeURIComponent(startYear)}&end_year=${encodeURIComponent(endYear)}`;
   let fetchUrl = `/get_stations${queryParams}`;
   console.log("Fetching Stations from:", fetchUrl);
@@ -214,7 +214,7 @@ async function fetchStationData() {
       console.warn("Keine Stationen gefunden, die die Kriterien erfüllen.");
     }
     
-    // Limit the number of stations to display.
+  
     const limitedStations = stationData.slice(0, parseInt(stationCount));
     
     updateStationTable(limitedStations);
@@ -845,9 +845,9 @@ function hideLoading() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Ensure the loading overlay is visible at the beginning
+  
   showLoading();
-  // Start polling the preload status
+  
   checkPreloadStatus();
 });
 
@@ -858,7 +858,7 @@ function checkPreloadStatus() {
         if (data.status === "done") {
             hideLoading();
         } else {
-            // If still loading, check again after 1 second
+            
             setTimeout(checkPreloadStatus, 1000);
         }
     })
