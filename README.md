@@ -229,4 +229,4 @@ Unten findest du eine strukturierte Übersicht aller Ordner und Dateien in diese
 5. **Dokumentation:**
    - Die PDFs (`Projektdokumentation.pdf`, `Code-Dokumentation.pdf`, etc.) geben Einblick in Code-Struktur, Projektmanagement und Architektur.
 
-Verwende diese Übersicht, um dich in dem Projekt zurechtzufinden oder beizutragen. Bei Bedarf bieten die PDF-Dateien eine vertiefende Dokumentation zum Code und zum Projektablauf.
+Diese Übersicht hilft Ihnen, sich in dem Projekt zurechtzufinden. Bei Bedarf bieten die PDF-Dateien eine vertiefende Dokumentation zum Code und zum Projektablauf.
