@@ -210,23 +210,19 @@ Unten findest du eine strukturierte Übersicht aller Ordner und Dateien in diese
 
 ## Zusammenspiel der Komponenten
 
-1. **Lokale Entwicklung:**
-   - Erstelle am besten ein virtuelles Python-Environment (`.venv`) und installiere alle Pakete mit `pip install -r requirements.txt`.
-   - Starte die Flask-App lokal über `python app.py`.
-
-2. **Tests:**
+1. **Tests:**
    - **Python-Tests:** Mit `pytest` (oder über GitHub Actions per `python-app-test.yml`).
    - **Browser-Tests:** `test.html` manuell im Browser öffnen oder `npm test` ausführen (nutzt Puppeteer im Headless-Modus).
 
-3. **Dockerisierung:**
+2. **Containerisierung:**
    - **`Dockerfile`:** Baut das Image.
    - **`docker-compose.yml`:** Startet den Container mit Port 8080 und Ressourcenlimits.
    - **`docker-publish.yml`:** Baut das Image und pusht es automatisch in die GitHub Container Registry.
 
-4. **Continuous Integration:**
+2. **Continuous Integration:**
    - Die GitHub-Actions in `.github/workflows/` werden bei jedem Push oder Pull Request ausgeführt, führen Tests durch und bauen ggf. Images.
 
-5. **Dokumentation:**
+4. **Dokumentation:**
    - Die PDFs (`Projektdokumentation.pdf`, `Code-Dokumentation.pdf`, etc.) geben Einblick in Code-Struktur, Projektmanagement und Architektur.
 
 Diese Übersicht hilft Ihnen, sich in dem Projekt zurechtzufinden. Bei Bedarf bieten die PDF-Dateien eine vertiefende Dokumentation zum Code und zum Projektablauf.
