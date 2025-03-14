@@ -1,7 +1,7 @@
 function getInputValue(id) {
   return document.getElementById(id).value.trim();
 }
-let latitude_positive;
+let latitudePositive;
 
 var map = L.map('map').setView([52.52, 13.40], 5);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -74,7 +74,7 @@ function updateMapMarker() {
     marker = L.marker([latitude, longitude], { icon: redIcon }).addTo(map);
   }
   map.setView([latitude, longitude], 10);
-  latitude_positive = (latitude >= 0);
+  latitudePositive = (latitude >= 0);
 }
 
 function updateRadiusCircle() {
@@ -262,20 +262,20 @@ function updateStationMarkers(stationData) {
 }
 
 function selectStationByData(station) {
-  let lat = parseFloat(station.LATITUDE);
-  let lon = parseFloat(station.LONGITUDE);
+  const lat = parseFloat(station.LATITUDE);
+  const lon = parseFloat(station.LONGITUDE);
   map.setView([lat, lon], 10);
 
-  let annualHeader = document.querySelector("#annual-data-container .BoxHeading");
-  let seasonalHeader = document.querySelector("#seasonal-data-container .BoxHeading");
-  let graphHeader = document.querySelector("#chart-container .BoxHeading");
+  const annualHeader = document.querySelector("#annual-data-container .BoxHeading");
+  const seasonalHeader = document.querySelector("#seasonal-data-container .BoxHeading");
+  const graphHeader = document.querySelector("#chart-container .BoxHeading");
 
   if (annualHeader) { annualHeader.innerText = `${station.NAME} - Jährliche Durchschnittswerte`; }
   if (seasonalHeader) { seasonalHeader.innerText = `${station.NAME} - Saisonale Durchschnittswerte`; }
   if (graphHeader) { graphHeader.innerText = `${station.NAME} - Wetterdaten`; }
 
-  let startYear = getInputValue("start-year");
-  let endYear = getInputValue("end-year");
+  const startYear = getInputValue("start-year");
+  const endYear = getInputValue("end-year");
   fetchWeatherData(station.ID, startYear, endYear);
 }
 
@@ -320,37 +320,13 @@ function processWeatherData(data) {
     .rollup(values => d3.mean(values, d => d.VALUE))
     .entries(tmaxData)
     .map(d => ({ year: +d.key, value: d.value }));
-
-  function getSeason(date) {
-    let month = date.getMonth() + 1;
-    if (latitude_positive) {
-      if (month === 12 || month === 1 || month === 2) return "Winter";
-      else if (month >= 3 && month <= 5) return "Spring";
-      else if (month >= 6 && month <= 8) return "Summer";
-      else if (month >= 9 && month <= 11) return "Autumn";
-    } else {
-      if (month === 12 || month === 1 || month === 2) return "Summer";
-      else if (month >= 3 && month <= 5) return "Autumn";
-      else if (month >= 6 && month <= 8) return "Winter";
-      else if (month >= 9 && month <= 11) return "Spring";
-    }
-  }
-
-  function getSeasonYear(date) {
-    let year = date.getFullYear();
-    let month = date.getMonth() + 1;
-    if (latitude_positive && month === 12) {
-      return year + 1;
-    }
-    return year;
-  }
   
   let seasonalTmin = d3.nest()
-    .key(d => getSeasonYear(d.DATE) + "-" + getSeason(d.DATE))
+    .key(d => getSeasonYear(d.DATE, latitudePositive) + "-" + getSeason(d.DATE, latitudePositive))
     .rollup(values => {
       return {
-        season: getSeason(values[0].DATE),
-        year: getSeasonYear(values[0].DATE),
+        season: getSeason(values[0].DATE, latitudePositive),
+        year: getSeasonYear(values[0].DATE, latitudePositive),
         value: d3.mean(values, d => d.VALUE)
       };
     })
@@ -358,11 +334,11 @@ function processWeatherData(data) {
     .map(d => d.value);
   
   let seasonalTmax = d3.nest()
-    .key(d => getSeasonYear(d.DATE) + "-" + getSeason(d.DATE))
+    .key(d => getSeasonYear(d.DATE, latitudePositive) + "-" + getSeason(d.DATE, latitudePositive))
     .rollup(values => {
       return {
-        season: getSeason(values[0].DATE),
-        year: getSeasonYear(values[0].DATE),
+        season: getSeason(values[0].DATE, latitudePositive),
+        year: getSeasonYear(values[0].DATE, latitudePositive),
         value: d3.mean(values, d => d.VALUE)
       };
     })
@@ -370,41 +346,50 @@ function processWeatherData(data) {
     .map(d => d.value);
   
   const userEndYear = parseInt(getInputValue("end-year"));
-
-  seasonalTmin = seasonalTmin.filter(d => {
-    if (d.season === "Winter" && d.year > userEndYear) {
-      return false;
-    }
-    return true;
-  });
+  seasonalTmin = seasonalTmin.filter(d => !(d.season === "Winter" && d.year > userEndYear));
+  seasonalTmax = seasonalTmax.filter(d => !(d.season === "Winter" && d.year > userEndYear));
   
-  seasonalTmax = seasonalTmax.filter(d => {
-    if (d.season === "Winter" && d.year > userEndYear) {
-      return false;
-    }
-    return true;
-  });
-
-  let processedData = {
-    annualTmin: annualTmin,
-    annualTmax: annualTmax,
-    seasonalTmin: seasonalTmin,
-    seasonalTmax: seasonalTmax
+  const processedData = {
+    annualTmin,
+    annualTmax,
+    seasonalTmin,
+    seasonalTmax
   };
   window.currentWeatherDataset = processedData;
   drawChart(processedData);
+  return processedData;
+}
+
+function getSeason(date, latitudePositive) {
+  const month = date.getMonth() + 1;
+  if (latitudePositive) {
+    if ([12, 1, 2].includes(month)) return "Winter";
+    else if ([3, 4, 5].includes(month)) return "Spring";
+    else if ([6, 7, 8].includes(month)) return "Summer";
+    else if ([9, 10, 11].includes(month)) return "Autumn";
+  } else {
+    if ([12, 1, 2].includes(month)) return "Summer";
+    else if ([3, 4, 5].includes(month)) return "Autumn";
+    else if ([6, 7, 8].includes(month)) return "Winter";
+    else if ([9, 10, 11].includes(month)) return "Spring";
+  }
+}
+
+function getSeasonYear(date, latitudePositive) {
+  let year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  if (latitudePositive && month === 12) {
+    return year + 1;
+  }
+  return year;
 }
 
 function fillMissingYears(data, minYear, maxYear) {
-  let dataMap = new Map();
+  const dataMap = new Map();
   data.forEach(d => dataMap.set(d.year, d.value));
-  let filled = [];
+  const filled = [];
   for (let year = minYear; year <= maxYear; year++) {
-    if (dataMap.has(year)) {
-      filled.push({ year: year, value: dataMap.get(year) });
-    } else {
-      filled.push({ year: year, value: null });
-    }
+    filled.push({ year, value: dataMap.has(year) ? dataMap.get(year) : null });
   }
   return filled;
 }

@@ -131,8 +131,8 @@ def test_fetch_and_filter_stations(monkeypatch):
 
 def test_fetch_weather_data(monkeypatch):
     mock_data = """ID,DATE,ELEMENT,VALUE,M-FLAG,Q-FLAG,S-FLAG,OBS-TIME
-USW00094728,20230101,TMAX,30,M,X,S,0700
-USW00094728,20230102,TMIN,10,M,X,S,0700"""
+        USW00094728,20230101,TMAX,30,M,X,S,0700
+        USW00094728,20230102,TMIN,10,M,X,S,0700"""
 
     def mock_requests_get(*args, **kwargs):
         class MockResponse:
@@ -152,8 +152,8 @@ USW00094728,20230102,TMIN,10,M,X,S,0700"""
 
 def test_parse_ghcnd_csv_from_string():
     mock_data = """ID,DATE,ELEMENT,VALUE,M-FLAG,Q-FLAG,S-FLAG,OBS-TIME
-USW00094728,20230101,TMAX,30,M,X,S,0700
-USW00094728,20230102,TMIN,10,M,X,S,0700"""
+        USW00094728,20230101,TMAX,30,M,X,S,0700
+        USW00094728,20230102,TMIN,10,M,X,S,0700"""
 
     df = parse_ghcnd_csv_from_string(mock_data)
 

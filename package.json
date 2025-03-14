@@ -1,0 +1,12 @@
+{
+    "name": "browser-tests",
+    "version": "1.0.0",
+    "description": "Automated browser tests using Puppeteer, Mocha, and Chai",
+    "main": "runTests.js",
+    "scripts": {
+      "test": "node runTests.js"
+    },
+    "devDependencies": {
+      "puppeteer": "^20.8.1"
+    }
+  }

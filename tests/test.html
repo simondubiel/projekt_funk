@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Mocha Tests</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.2.0/mocha.min.css" integrity="sha512-GFDVEmPX2mY19qIxb/hCVNU4PZnkDOD+ECemJcy+y2+cO7V8i9IhJU2r7otKl5vL6xSROH9mT6ZBvNIPVtp5hw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <div id="mocha"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.2.0/mocha.min.js" integrity="sha512-xmE6dGvd17GrGJD2r+vm/eQyJIQ6f7XD45+F7/eXU57RLUBzwgEe8p8yyEck90fO+U1b+Be4tOmd+ShTPD+S/Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.7/chai.min.js" integrity="sha512-WCMADuD2Ctd3rN3gE73V+ymk1KHkF+ml57cJNTiV9Dq7/ee2I/RWAM3P9xYdyDDH3BQPHkr/bwZzN5g9CM+XBA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>mocha.setup('bdd');</script>
+    <script src="../static/js/script.js"></script>
+    <script src="tests.js"></script>
+    <script>
+        var runner = mocha.run();
+        runner.on('end', function() {
+        window.mochaFinished = true;
+        window.mochaFailures = runner.failures;
+    });
+    </script>
+</body>
+</html>
