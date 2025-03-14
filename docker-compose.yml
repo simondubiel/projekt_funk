@@ -1,8 +1,16 @@
 version: '2.4'
 services:
   flask-app:
-    image: ghcr.io/simondubiel/flask-app:latest  
+    image: ghcr.io/simondubiel/flask-app:latest
     ports:
       - "8080:8080"
     restart: unless-stopped
-    mem_limit: 999m
+    
+    # RAM-Limit kannst du entweder so beibehalten oder auf 1g setzen:
+    mem_limit: 1g
+    
+    # CPU-Begrenzung über diese Flags
+    # (wird bei docker-compose up beachtet, aber nur als 'Best-Effort'):
+    cpuset: "0-1"        # Erlaubt die Nutzung von CPU-Kern 0 und 1
+    cpu_shares: 1024     # Relative Gewichtung (Standard 1024)
+    cpu_quota: 200000    # 200.000 µs von 100.000 µs = 2 CPUs
