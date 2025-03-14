@@ -6,7 +6,7 @@
 
 **Datengrundlage:** https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/
 
-**Code-Erläuterung:** [Code-Erläuterung](users_guide/Code-Dokumentation.pdf)
+**Code-Erläuterung:** [Code-Erläuterung](users_guide/Codedokumentation.pdf)
 
 
 # Projektstruktur und Dateibeschreibungen
